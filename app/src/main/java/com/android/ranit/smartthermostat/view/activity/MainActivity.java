@@ -1,8 +1,10 @@
-package com.android.ranit.smartthermostat;
+package com.android.ranit.smartthermostat.view.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+
+import com.android.ranit.smartthermostat.R;
 
 public class MainActivity extends AppCompatActivity {
 
