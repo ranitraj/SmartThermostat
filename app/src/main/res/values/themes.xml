@@ -1,9 +1,9 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.SmartThermostat" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.SmartThermostat" parent="Theme.MaterialComponents.Light.DarkActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorPrimary">@color/orange_500</item>
+        <item name="colorPrimaryVariant">@color/orange_700</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/teal_200</item>
@@ -12,5 +12,48 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
+    </style>
+
+    <!-- Text View Style -->
+    <style name="TextView.Header.Large.Orange" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/orange_500</item>
+        <item name="fontFamily">@font/cairo_light</item>
+    </style>
+
+    <style name="TextView.Header.Medium.Orange" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_12</item>
+        <item name="android:textColor">@color/orange_500</item>
+        <item name="fontFamily">@font/cairo_light</item>
+    </style>
+
+    <style name="TextView.Header.Large.Orange.700" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/orange_700</item>
+        <item name="fontFamily">@font/cairo_semibold</item>
+    </style>
+
+    <style name="TextView.Header.Medium.Orange.500" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_12</item>
+        <item name="android:textColor">@color/orange_500</item>
+        <item name="fontFamily">@font/cairo_light</item>
+    </style>
+
+    <style name="TextView.Header.Large" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/black_header</item>
+        <item name="fontFamily">@font/cairo_semibold</item>
+    </style>
+
+    <style name="TextView.Header.Large.Red" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_16</item>
+        <item name="android:textColor">@color/red_500</item>
+        <item name="fontFamily">@font/cairo_light</item>
+    </style>
+
+    <style name="TextView.Header.XXLarge" parent="Widget.AppCompat.TextView">
+        <item name="android:textSize">@dimen/sp_40</item>
+        <item name="android:textColor">@color/black_header</item>
+        <item name="fontFamily">@font/cairo_semibold</item>
     </style>
 </resources>
