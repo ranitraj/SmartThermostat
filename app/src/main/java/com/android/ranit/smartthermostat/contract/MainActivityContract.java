@@ -15,7 +15,10 @@ public interface MainActivityContract {
 
         void onConnectButtonClicked();
         void onDisconnectButtonClicked();
-        void launchAlertDialog();
+        void launchDeviceScanDialog();
+
+        void startScanning();
+        void stopScanning();
 
         void requestPermissions();
         boolean checkPermissionsAtRuntime();

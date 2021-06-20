@@ -69,30 +69,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
             }
         });
 
-        // Customize UI
-        holder.layoutItem.setClickable(true);
-        if (mSelectedPosition == position) {
-            if (mCurrentState == ConnectionStates.DISCONNECTED) {
-                holder.tvDeviceName.setText(currentDevice.getName());
-                prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        DISCONNECT, false);
-            } else if (mCurrentState == ConnectionStates.CONNECTED) {
-                String text = "Connected to "+currentDevice.getName();
-                holder.tvDeviceName.setText(text);
-                prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        CONNECTED, false);
-            } else if (mCurrentState == ConnectionStates.CONNECTING) {
-                holder.layoutItem.setClickable(false);
-                prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        CONNECTING, true);
-            } else if (mCurrentState == ConnectionStates.DISCONNECTING) {
-                String text = "Disconnecting from "+currentDevice.getName();
-                holder.tvDeviceName.setText(text);
-            }
-        } else {
-            prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                    INITIAL_ANIMATION, true);
-        }
+        customizeViewHolder(holder, position, currentDevice);
     }
 
     @Override
@@ -120,7 +97,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
     /**
      * Set the DeviceList
      */
-    public void setHrmDeviceList(List<BluetoothDevice> list) {
+    public void setDeviceList(List<BluetoothDevice> list) {
         this.mDeviceList = list;
     }
 
@@ -141,5 +118,39 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
                                             String animationName, boolean loop) {
         lottieView.setAnimation(animationName);
         lottieView.loop(loop);
+    }
+
+    /**
+     * Customize UI for view-holder as per current device connectivity state
+     *
+     * @param holder - current view-holder
+     * @param position - view-holder position
+     * @param currentDevice - current BluetoothDevice object selected by user
+     */
+    private void customizeViewHolder(ViewHolder holder, int position, BluetoothDevice currentDevice) {
+        // Customize UI
+        holder.layoutItem.setClickable(true);
+        if (mSelectedPosition == position) {
+            if (mCurrentState == ConnectionStates.DISCONNECTED) {
+                holder.tvDeviceName.setText(currentDevice.getName());
+                prepareLottieAnimationView(holder.lottieConnectivityStatus,
+                        DISCONNECT, false);
+            } else if (mCurrentState == ConnectionStates.CONNECTED) {
+                String text = "Connected to "+currentDevice.getName();
+                holder.tvDeviceName.setText(text);
+                prepareLottieAnimationView(holder.lottieConnectivityStatus,
+                        CONNECTED, false);
+            } else if (mCurrentState == ConnectionStates.CONNECTING) {
+                holder.layoutItem.setClickable(false);
+                prepareLottieAnimationView(holder.lottieConnectivityStatus,
+                        CONNECTING, true);
+            } else if (mCurrentState == ConnectionStates.DISCONNECTING) {
+                String text = "Disconnecting from "+currentDevice.getName();
+                holder.tvDeviceName.setText(text);
+            }
+        } else {
+            prepareLottieAnimationView(holder.lottieConnectivityStatus,
+                    INITIAL_ANIMATION, true);
+        }
     }
 }

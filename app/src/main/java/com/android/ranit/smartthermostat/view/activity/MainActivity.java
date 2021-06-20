@@ -11,6 +11,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -42,7 +46,8 @@ public class MainActivity extends AppCompatActivity
     private static final String ANIMATION_TEMPERATURE = "temperature.json";
     private static final String ANIMATION_LED_ON = "on.json";
     private static final String ANIMATION_LED_OFF = "off.json";
-    private static final String SCANNING = "scanning.json";
+    private static final String ANIMATION_SCANNING = "scanning.json";
+    private static final String ANIMATION_STOPPED = "stopped.json";
 
     private ConnectionStates mCurrentState = ConnectionStates.DISCONNECTED;
 
@@ -54,6 +59,7 @@ public class MainActivity extends AppCompatActivity
     };
 
     private BluetoothAdapter mBluetoothAdapter;
+    private BluetoothLeScanner mBluetoothLeScanner;
 
     private ActivityMainBinding mBinding;
     private View mCustomAlertView;
@@ -145,8 +151,8 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void launchAlertDialog() {
-        Log.d(TAG, "launchAlertDialog() called");
+    public void launchDeviceScanDialog() {
+        Log.d(TAG, "launchDeviceScanDialog() called");
         final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setView(mCustomAlertView)
                 .setTitle(R.string.dialog_title)
@@ -156,7 +162,7 @@ public class MainActivity extends AppCompatActivity
                 .setNeutralButton(R.string.dialog_neutral_button, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        // TODO: Stop Scanning
+                        stopScanning();
                         dialogInterface.dismiss();
                     }
                 })
@@ -174,7 +180,7 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onClick(View view) {
                         Log.d(TAG, "Start button clicked");
-                        // TODO: Start Scanning
+                        startScanning();
                     }
                 });
 
@@ -182,12 +188,50 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onClick(View view) {
                         Log.d(TAG, "Stop button clicked");
-                        // TODO: Stop Scanning
+                        stopScanning();
                     }
                 });
             }
         });
         dialog.show();
+    }
+
+    /**
+     * Start Scanning for BLE Devices
+     *
+     * Scanning requires 3 parameters to 'Start Scanning':
+     * a) ScanFilter (pass 'null' in case no-specific filtering is required)
+     * b) ScanSettings
+     * c) ScanCallback
+     */
+    @Override
+    public void startScanning() {
+        Log.d(TAG, "startScanning() called");
+        mBluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+        if (mScanningLottieView.getVisibility() != View.VISIBLE) {
+            changeVisibility(mScanningLottieView, View.VISIBLE);
+        }
+        playLottieAnimation(ANIMATION_SCANNING);
+
+        // Begin Scan
+        Log.d(TAG, "Started Scanning for BLE devices");
+        mBluetoothLeScanner.startScan(null, bluetoothLeScanSettings, bluetoothLeScanCallback);
+    }
+
+    @Override
+    public void stopScanning() {
+        Log.d(TAG, "stopScanning() called");
+
+        if (mScanningLottieView.getVisibility() != View.VISIBLE) {
+            changeVisibility(mScanningLottieView, View.VISIBLE);
+            changeVisibility(mRecyclerView, View.GONE);
+        }
+        playLottieAnimation(ANIMATION_STOPPED);
+
+        mBluetoothLeScanner.stopScan(bluetoothLeScanCallback);
+        mBleDeviceList.clear();
+        mRvAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -293,8 +337,8 @@ public class MainActivity extends AppCompatActivity
             prepareAlertDialog();
 
             // Start Scanning prior to launch
-            // TODO: Start Scan
-            launchAlertDialog();
+            startScanning();
+            launchDeviceScanDialog();
         }
     };
 
@@ -306,6 +350,57 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void onClick(View view) {
             // TODO: Disconnect from device & modify UI appropriately
+        }
+    };
+
+    /**
+     * Initializing 'ScanSettings' parameter for 'BLE device Scanning' via Builder Pattern
+     */
+    private final ScanSettings bluetoothLeScanSettings = new ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+            .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
+            .build();
+
+    /**
+     * Initializing 'ScanCallback' parameter for 'BLE device Scanning'
+     *
+     * NOTE: onScanResult is triggered whenever a BLE device, matching the
+     *       ScanFilter and ScanSettings is found.
+     *       In this callback, we get access to the BluetoothDevice and RSSI
+     *       objects through the ScanResult
+     */
+    private final ScanCallback bluetoothLeScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            super.onScanResult(callbackType, result);
+            BluetoothDevice bluetoothDevice = result.getDevice();
+
+            // Append device to Scanned devices list
+            if (bluetoothDevice.getName() != null) {
+                if (!mBleDeviceList.contains(bluetoothDevice)) {
+                    Log.d(TAG, "onScanResult: Adding "+bluetoothDevice.getName()+" to list");
+                    mBleDeviceList.add(bluetoothDevice);
+
+                    changeVisibility(mRecyclerView, View.VISIBLE);
+                    changeVisibility(mScanningLottieView, View.GONE);
+
+                    mRvAdapter.setDeviceList(mBleDeviceList);
+                    mRvAdapter.notifyDataSetChanged();
+                }
+            }
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+            Log.e(TAG, "onScanFailed() called with: errorCode = [" + errorCode + "]");
         }
     };
 
@@ -360,6 +455,16 @@ public class MainActivity extends AppCompatActivity
 
         recyclerView.setHasFixedSize(true);
         recyclerView.setAdapter(mRvAdapter);
+    }
+
+    /**
+     * Play lottie-animations within alert-dialog
+     *
+     * @param animationName - animation to be played
+     */
+    private void playLottieAnimation(String animationName) {
+        mScanningLottieView.setAnimation(animationName);
+        mScanningLottieView.playAnimation();
     }
 
     /**
