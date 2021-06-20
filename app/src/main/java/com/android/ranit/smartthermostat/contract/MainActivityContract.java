@@ -7,5 +7,12 @@ public interface MainActivityContract {
     interface View {
         void initializeUi();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
+
+        void onConnectButtonClicked();
+        void onDisconnectButtonClicked();
+
+        void requestPermissions();
+        boolean checkPermissionsAtRuntime();
+        boolean checkBluetoothStatus();
     }
 }

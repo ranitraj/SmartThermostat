@@ -44,4 +44,31 @@ public class MainActivity extends AppCompatActivity
         animationView.loop(loop);
         animationView.playAnimation();
     }
+
+    @Override
+    public void onConnectButtonClicked() {
+        Log.d(TAG, "onConnectButtonClicked() called");
+    }
+
+    @Override
+    public void onDisconnectButtonClicked() {
+        Log.d(TAG, "onDisconnectButtonClicked() called");
+    }
+
+    @Override
+    public void requestPermissions() {
+        Log.d(TAG, "requestPermissions() called");
+    }
+
+    @Override
+    public boolean checkPermissionsAtRuntime() {
+        Log.d(TAG, "checkPermissionsAtRuntime() called");
+        return false;
+    }
+
+    @Override
+    public boolean checkBluetoothStatus() {
+        Log.d(TAG, "checkBluetoothStatus() called");
+        return false;
+    }
 }
