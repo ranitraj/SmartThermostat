@@ -7,6 +7,7 @@ public interface MainActivityContract {
     interface View {
         void initializeUi();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
+        void displaySnackBar(String message);
 
         void onConnectButtonClicked();
         void onDisconnectButtonClicked();
