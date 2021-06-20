@@ -5,6 +5,7 @@ import androidx.databinding.DataBindingUtil;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.android.ranit.smartthermostat.R;
@@ -30,6 +31,31 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    @Override
     public void initializeUi() {
         Log.d(TAG, "initializeUi() called");
 
@@ -48,11 +74,13 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onConnectButtonClicked() {
         Log.d(TAG, "onConnectButtonClicked() called");
+        mBinding.btnStartScanning.setOnClickListener(connectButtonClickListener);
     }
 
     @Override
     public void onDisconnectButtonClicked() {
         Log.d(TAG, "onDisconnectButtonClicked() called");
+        mBinding.btnStartScanning.setOnClickListener(disconnectButtonClickListener);
     }
 
     @Override
@@ -71,4 +99,26 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "checkBluetoothStatus() called");
         return false;
     }
+
+    /**
+     * Click listener for Connect button
+     * Launches alert dialog which facilitates scanning and connection to BLE device.
+     */
+    private final View.OnClickListener connectButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            // TODO: Launch alert dialog
+        }
+    };
+
+    /**
+     * Click listener for disconnect button
+     * Initiates disconnection request to GATT server in order to disconnect from BLE device.
+     */
+    private final View.OnClickListener disconnectButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            // TODO: Disconnect from device & modify UI appropriately
+        }
+    };
 }
