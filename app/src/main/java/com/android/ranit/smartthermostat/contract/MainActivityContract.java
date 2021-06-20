@@ -1,5 +1,7 @@
 package com.android.ranit.smartthermostat.contract;
 
+import android.widget.Button;
+
 import com.airbnb.lottie.LottieAnimationView;
 
 public interface MainActivityContract {
@@ -8,9 +10,12 @@ public interface MainActivityContract {
         void initializeUi();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
         void displaySnackBar(String message);
+        void changeVisibility(android.view.View view, int visibility);
+        void switchButton(Button button, String text);
 
         void onConnectButtonClicked();
         void onDisconnectButtonClicked();
+        void launchAlertDialog();
 
         void requestPermissions();
         boolean checkPermissionsAtRuntime();

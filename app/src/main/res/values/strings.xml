@@ -8,4 +8,10 @@
     <string name="notify">Notify</string>
     <string name="initial_temperature">0</string>
     <string name="led_off">Led Off</string>
+
+    <string name="dialog_title">Device Scanner</string>
+    <string name="dialog_message">Nearby Sensors will be displayed below</string>
+    <string name="dialog_positive_button">Start</string>
+    <string name="dialog_neutral_button">Dismiss</string>
+    <string name="dialog_negative_button">Stop</string>
 </resources>
