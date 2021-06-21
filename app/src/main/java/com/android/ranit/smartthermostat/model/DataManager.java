@@ -2,9 +2,12 @@ package com.android.ranit.smartthermostat.model;
 
 import android.bluetooth.BluetoothDevice;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import com.android.ranit.smartthermostat.common.ConnectionStates;
 
 /**
  * Created by: Ranit Raj Ganguly on 21/06/2021
@@ -18,7 +21,7 @@ public class DataManager {
     // Private instance variable
     private static DataManager INSTANCE;
 
-    private MutableLiveData<BluetoothDevice> mBleDeviceMutableLiveData = new MutableLiveData<>();
+    private MutableLiveData<ConnectionStates> mBleDeviceMutableLiveData = new MutableLiveData<>();
 
     // Private Constructor
     private DataManager() {}
@@ -26,6 +29,7 @@ public class DataManager {
     // Public method to get instance of Singleton class
     public DataManager getInstance() {
         if (INSTANCE == null) {
+            Log.d(TAG, "Creating new Instance of DataManager class");
             INSTANCE = new DataManager();
         }
         return INSTANCE;
@@ -35,15 +39,16 @@ public class DataManager {
      * Updates the Mutable-Live-Data based upon the current Connection state
      * received from ACL_Broadcast_Receiver
      *
-     * @param bluetoothDevice - Bluetooth device object currently connected/disconnected
+     * @param currentState - Current connection state of the Bluetooth device
      */
-    public void setBleDeviceLiveData(BluetoothDevice bluetoothDevice) {
+    public void setBleDeviceLiveData(ConnectionStates currentState) {
+        Log.d(TAG, "setBleDeviceLiveData() called");
         if (Looper.myLooper() == Looper.getMainLooper()) {
             // Main-Thread
-            mBleDeviceMutableLiveData.setValue(bluetoothDevice);
+            mBleDeviceMutableLiveData.setValue(currentState);
         } else {
             // Background-Thread
-            mBleDeviceMutableLiveData.postValue(bluetoothDevice);
+            mBleDeviceMutableLiveData.postValue(currentState);
         }
     }
 
@@ -53,7 +58,8 @@ public class DataManager {
      *
      * @return mBleDeviceMutableLiveData - live data
      */
-    public LiveData<BluetoothDevice> getBleDeviceLiveData() {
+    public LiveData<ConnectionStates> getBleDeviceLiveData() {
+        Log.d(TAG, "getBleDeviceLiveData() called");
         return mBleDeviceMutableLiveData;
     }
 
