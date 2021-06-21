@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
         onConnectButtonClicked();
+        disableButtons();
     }
 
     @Override
@@ -134,8 +135,32 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void switchButton(Button button, String text) {
+    public void switchButtonText(Button button, String text) {
+        button.setText(text);
+    }
 
+    @Override
+    public void disableButtons() {
+        Log.d(TAG, "disableButtons() called");
+        mBinding.btnReadTemperature.setClickable(false);
+        mBinding.btnEnableNotify.setClickable(false);
+        mBinding.btnToggleLed.setClickable(false);
+
+        mBinding.btnReadTemperature.setAlpha(0.4f);
+        mBinding.btnEnableNotify.setAlpha(0.4f);
+        mBinding.btnToggleLed.setAlpha(0.4f);
+    }
+
+    @Override
+    public void enableButtons() {
+        Log.d(TAG, "enableButtons() called");
+        mBinding.btnReadTemperature.setClickable(true);
+        mBinding.btnEnableNotify.setClickable(true);
+        mBinding.btnToggleLed.setClickable(true);
+
+        mBinding.btnReadTemperature.setAlpha(1f);
+        mBinding.btnEnableNotify.setAlpha(1f);
+        mBinding.btnToggleLed.setAlpha(1f);
     }
 
     @Override

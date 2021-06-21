@@ -11,7 +11,9 @@ public interface MainActivityContract {
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
         void displaySnackBar(String message);
         void changeVisibility(android.view.View view, int visibility);
-        void switchButton(Button button, String text);
+        void switchButtonText(Button button, String text);
+        void disableButtons();
+        void enableButtons();
 
         void onConnectButtonClicked();
         void onDisconnectButtonClicked();
