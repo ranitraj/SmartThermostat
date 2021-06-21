@@ -10,6 +10,7 @@ public interface MainActivityContract {
     interface View {
         void initializeComponents();
         void initializeUi();
+        void clearComponents();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
         void displaySnackBar(String message);
         void changeVisibility(android.view.View view, int visibility);
@@ -26,6 +27,13 @@ public interface MainActivityContract {
 
         void onConnectedBroadcastReceived(BluetoothDevice device);
         void onDisconnectedBroadcastReceived();
+
+        void bindToService();
+        void unbindFromService();
+
+        void connectToDevice(String address);
+        void disconnectFromDevice();
+
 
         void requestPermissions();
         boolean checkPermissionsAtRuntime();

@@ -11,6 +11,7 @@ import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -32,6 +33,14 @@ public class BleConnectivityService extends Service {
     private BluetoothGatt mBluetoothGatt;
 
     private String mBluetoothDeviceAddress;
+
+    private final IBinder mBinder = new LocalBinder();
+
+    public class LocalBinder extends Binder {
+        public BleConnectivityService getService() {
+            return BleConnectivityService.this;
+        }
+    }
 
     /**
      * Implementing GATT callback events
@@ -96,7 +105,7 @@ public class BleConnectivityService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind() called");
-        return null;
+        return mBinder;
     }
 
     @Override

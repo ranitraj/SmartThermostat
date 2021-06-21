@@ -16,11 +16,14 @@ import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -35,6 +38,7 @@ import com.android.ranit.smartthermostat.contract.MainActivityContract;
 import com.android.ranit.smartthermostat.data.BleDeviceDataObject;
 import com.android.ranit.smartthermostat.databinding.ActivityMainBinding;
 import com.android.ranit.smartthermostat.model.DataManager;
+import com.android.ranit.smartthermostat.service.BleConnectivityService;
 import com.android.ranit.smartthermostat.view.adapter.BleDeviceAdapter;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -63,6 +67,7 @@ public class MainActivity extends AppCompatActivity
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBluetoothLeScanner;
+    private BleConnectivityService mService;
 
     private ActivityMainBinding mBinding;
     private View mCustomAlertView;
@@ -72,8 +77,29 @@ public class MainActivity extends AppCompatActivity
 
     private final List<BluetoothDevice> mBleDeviceList = new ArrayList<>();
 
+    private Intent mServiceIntent;
     private String mDeviceName;
     private String mDeviceAddress;
+
+    /**
+     * Manage Service life-cycles
+     */
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder service) {
+            mService = ((BleConnectivityService.LocalBinder) service).getService();
+            if (!mService.initializeBluetoothAdapter()) {
+                Log.e(TAG, "Unable to initialize Bluetooth");
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            Log.e(TAG, "onServiceDisconnected: ");
+            mService = null;
+        }
+    };
 
     /**
      * Observer for current-connection-state of BLE device
@@ -128,13 +154,16 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
-        DataManager.getInstance().getBleDeviceLiveData().removeObserver(mDeviceConnectionStateObserver);
+        clearComponents();
     }
 
     @Override
     public void initializeComponents() {
         Log.d(TAG, "initializeComponents() called");
+
+        // Initialize and Bind to Service
+        mServiceIntent = new Intent(this, BleConnectivityService.class);
+        bindToService();
 
         // Set initial state of BLE device in Live-Data as DISCONNECTED and bluetoothDevice as 'null'
         DataManager.getInstance()
@@ -153,6 +182,13 @@ public class MainActivity extends AppCompatActivity
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
         onConnectButtonClicked();
+    }
+
+    @Override
+    public void clearComponents() {
+        Log.d(TAG, "clearComponents() called");
+        DataManager.getInstance().getBleDeviceLiveData().removeObserver(mDeviceConnectionStateObserver);
+        unbindFromService();
     }
 
     @Override
@@ -316,6 +352,7 @@ public class MainActivity extends AppCompatActivity
 
         enableButtons();
         onDisconnectButtonClicked();
+        updateAdapterConnectionState(-1);
 
         mBinding.tvDeviceName.setText(mDeviceName);
         mBinding.tvConnectivityStatus.setText(R.string.connected);
@@ -338,6 +375,30 @@ public class MainActivity extends AppCompatActivity
         mBinding.tvTemperature.setText("0");
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.red_500));
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.connect));
+    }
+
+    @Override
+    public void bindToService() {
+        Log.d(TAG, "bindToService() called");
+        bindService(mServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+    }
+
+    @Override
+    public void unbindFromService() {
+        Log.d(TAG, "unbindFromService() called");
+        unbindService(mServiceConnection);
+    }
+
+    @Override
+    public void connectToDevice(String address) {
+        Log.d(TAG, "connectToDevice() called with: address = [" + address + "]");
+        mService.connectToBleDevice(address);
+    }
+
+    @Override
+    public void disconnectFromDevice() {
+        Log.d(TAG, "disconnectFromDevice() called");
+        mService.disconnectFromBleDevice();
     }
 
     @Override
@@ -455,7 +516,7 @@ public class MainActivity extends AppCompatActivity
     private final View.OnClickListener disconnectButtonClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-            // TODO: Disconnect from device & modify UI appropriately
+            disconnectFromDevice();
         }
     };
 
@@ -544,7 +605,7 @@ public class MainActivity extends AppCompatActivity
                             // Disconnect
                             Log.d(TAG, "Disconnecting from Device: "+mBleDeviceList.get(position).getName());
 
-                            // TODO: Disconnect from BLE device (via service)
+                            disconnectFromDevice();
 
                             mCurrentState = ConnectionStates.DISCONNECTING;
                             updateAdapterConnectionState(position);
@@ -552,7 +613,7 @@ public class MainActivity extends AppCompatActivity
                             // Connect
                             Log.d(TAG, "Connecting to Device: "+mBleDeviceList.get(position).getName());
 
-                            // TODO: Connect to BLE device (via service)
+                            connectToDevice(mBleDeviceList.get(position).getAddress());
 
                             mCurrentState = ConnectionStates.CONNECTING;
                             updateAdapterConnectionState(position);

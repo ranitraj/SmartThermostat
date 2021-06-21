@@ -34,6 +34,9 @@
             </intent-filter>
         </receiver>
 
+        <!-- Service -->
+        <service android:name=".service.BleConnectivityService" />
+
     </application>
 
 </manifest>
