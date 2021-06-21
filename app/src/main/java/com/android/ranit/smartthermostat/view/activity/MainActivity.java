@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void changeVisibility(View view, int visibility) {
-
+        view.setVisibility(visibility);
     }
 
     @Override
@@ -212,13 +212,19 @@ public class MainActivity extends AppCompatActivity
         if (mScanningLottieView.getVisibility() != View.VISIBLE) {
             changeVisibility(mScanningLottieView, View.VISIBLE);
         }
-        playLottieAnimation(ANIMATION_SCANNING);
+        playDialogAnimation(ANIMATION_SCANNING);
 
         // Begin Scan
         Log.d(TAG, "Started Scanning for BLE devices");
         mBluetoothLeScanner.startScan(null, bluetoothLeScanSettings, bluetoothLeScanCallback);
     }
 
+    /**
+     * Scanning consumes a lot of battery resource.
+     * Hence, stopScan is mandatory
+     *
+     * 'stopScan' requires one 1 parameter (i.e) 'ScanCallback'
+     */
     @Override
     public void stopScanning() {
         Log.d(TAG, "stopScanning() called");
@@ -227,7 +233,7 @@ public class MainActivity extends AppCompatActivity
             changeVisibility(mScanningLottieView, View.VISIBLE);
             changeVisibility(mRecyclerView, View.GONE);
         }
-        playLottieAnimation(ANIMATION_STOPPED);
+        playDialogAnimation(ANIMATION_STOPPED);
 
         mBluetoothLeScanner.stopScan(bluetoothLeScanCallback);
         mBleDeviceList.clear();
@@ -424,6 +430,7 @@ public class MainActivity extends AppCompatActivity
      * @param recyclerView - to display Ble devices matching the scan filters and parameters
      */
     private void displayDataInRecyclerView(RecyclerView recyclerView) {
+        Log.d(TAG, "displayDataInRecyclerView() called ");
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
@@ -432,7 +439,7 @@ public class MainActivity extends AppCompatActivity
         mRvAdapter = new BleDeviceAdapter(this, mBleDeviceList,
                 new BleDeviceAdapter.DeviceItemClickListener() {
                     @Override
-                    public void onHrmDeviceClicked(int position) {
+                    public void onDeviceClicked(int position) {
                         if (mCurrentState == ConnectionStates.CONNECTED) {
                             // Disconnect
                             Log.d(TAG, "Disconnecting from Device: "+mBleDeviceList.get(position).getName());
@@ -462,7 +469,7 @@ public class MainActivity extends AppCompatActivity
      *
      * @param animationName - animation to be played
      */
-    private void playLottieAnimation(String animationName) {
+    private void playDialogAnimation(String animationName) {
         mScanningLottieView.setAnimation(animationName);
         mScanningLottieView.playAnimation();
     }

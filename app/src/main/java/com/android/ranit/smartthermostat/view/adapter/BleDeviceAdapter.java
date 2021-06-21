@@ -2,6 +2,7 @@ package com.android.ranit.smartthermostat.view.adapter;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,11 +24,12 @@ import java.util.List;
  * Created by: Ranit Raj Ganguly on 20/06/2021
  */
 public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.ViewHolder> {
+    private static final String TAG = BleDeviceAdapter.class.getSimpleName();
 
-    private static final String INITIAL_ANIMATION = "connect.json";
-    private static final String CONNECTED = "done.json";
-    private static final String CONNECTING = "connecting.json";
-    private static final String DISCONNECT = "cancel.json";
+    private static final String ANIMATION_INITIAL = "ble_connect.json";
+    private static final String ANIMATION_CONNECTED = "on.json";
+    private static final String ANIMATION_CONNECTING = "connecting.json";
+    private static final String ANIMATION_DISCONNECT = "off.json";
 
     private Context mContext;
     private List<BluetoothDevice> mDeviceList;
@@ -37,7 +39,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
 
     // Click listener Interface
     public interface DeviceItemClickListener {
-        void onHrmDeviceClicked(int position);
+        void onDeviceClicked(int position);
     }
 
     // Constructor
@@ -60,12 +62,12 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
         BluetoothDevice currentDevice = mDeviceList.get(position);
         holder.tvDeviceName.setText(currentDevice.getName());
         holder.tvDeviceAddress.setText(currentDevice.getAddress());
-        prepareLottieAnimationView(holder.lottieConnectivityStatus, INITIAL_ANIMATION,true);
+        prepareLottieAnimationView(holder.lottieConnectivityStatus, ANIMATION_INITIAL,true);
 
         holder.layoutItem.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mClickListener.onHrmDeviceClicked(position);
+                mClickListener.onDeviceClicked(position);
             }
         });
 
@@ -106,6 +108,7 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
      */
     public void setCurrentDeviceState(ConnectionStates state, int position) {
         this.mCurrentState = state;
+        Log.d(TAG, "setCurrentDeviceState() called with state: "+state);
         if (position != -1) {
             this.mSelectedPosition = position;
         }
@@ -134,23 +137,23 @@ public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceAdapter.View
             if (mCurrentState == ConnectionStates.DISCONNECTED) {
                 holder.tvDeviceName.setText(currentDevice.getName());
                 prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        DISCONNECT, false);
+                        ANIMATION_DISCONNECT, false);
             } else if (mCurrentState == ConnectionStates.CONNECTED) {
                 String text = "Connected to "+currentDevice.getName();
                 holder.tvDeviceName.setText(text);
                 prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        CONNECTED, false);
+                        ANIMATION_CONNECTED, false);
             } else if (mCurrentState == ConnectionStates.CONNECTING) {
                 holder.layoutItem.setClickable(false);
                 prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                        CONNECTING, true);
+                        ANIMATION_CONNECTING, true);
             } else if (mCurrentState == ConnectionStates.DISCONNECTING) {
                 String text = "Disconnecting from "+currentDevice.getName();
                 holder.tvDeviceName.setText(text);
             }
         } else {
             prepareLottieAnimationView(holder.lottieConnectivityStatus,
-                    INITIAL_ANIMATION, true);
+                    ANIMATION_INITIAL, true);
         }
     }
 }
