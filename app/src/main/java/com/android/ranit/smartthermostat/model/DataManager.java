@@ -6,7 +6,7 @@ import android.util.Log;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.android.ranit.smartthermostat.common.ConnectionStates;
+import com.android.ranit.smartthermostat.contract.DataManagerContract;
 import com.android.ranit.smartthermostat.data.BleDeviceDataObject;
 
 /**
@@ -15,7 +15,7 @@ import com.android.ranit.smartthermostat.data.BleDeviceDataObject;
  * Singleton Class used to cache and access non-persistent data throughout
  * the application lifecycle.
  */
-public class DataManager {
+public class DataManager implements DataManagerContract {
     private static final String TAG = DataManager.class.getSimpleName();
 
     // Private instance variable
@@ -41,6 +41,7 @@ public class DataManager {
      *
      * @param dataObject - Current connection state of the Bluetooth device
      */
+    @Override
     public void setBleDeviceLiveData(BleDeviceDataObject dataObject) {
         Log.d(TAG, "setBleDeviceLiveData() called");
         if (Looper.myLooper() == Looper.getMainLooper()) {
@@ -58,6 +59,7 @@ public class DataManager {
      *
      * @return mBleDeviceMutableLiveData - live data
      */
+    @Override
     public LiveData<BleDeviceDataObject> getBleDeviceLiveData() {
         Log.d(TAG, "getBleDeviceLiveData() called");
         return mBleDeviceMutableLiveData;
