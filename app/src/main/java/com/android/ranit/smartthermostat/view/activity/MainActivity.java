@@ -5,6 +5,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.databinding.DataBindingUtil;
+import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,7 +32,9 @@ import com.android.ranit.smartthermostat.R;
 import com.android.ranit.smartthermostat.common.ConnectionStates;
 import com.android.ranit.smartthermostat.common.Constants;
 import com.android.ranit.smartthermostat.contract.MainActivityContract;
+import com.android.ranit.smartthermostat.data.BleDeviceDataObject;
 import com.android.ranit.smartthermostat.databinding.ActivityMainBinding;
+import com.android.ranit.smartthermostat.model.DataManager;
 import com.android.ranit.smartthermostat.view.adapter.BleDeviceAdapter;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
@@ -69,12 +72,35 @@ public class MainActivity extends AppCompatActivity
 
     private final List<BluetoothDevice> mBleDeviceList = new ArrayList<>();
 
+    private String mDeviceName;
+    private String mDeviceAddress;
+
+    /**
+     * Observer for current-connection-state of BLE device
+     */
+    private final Observer<BleDeviceDataObject> mDeviceConnectionStateObserver = new Observer<BleDeviceDataObject>() {
+        @Override
+        public void onChanged(BleDeviceDataObject bleDeviceDataObject) {
+            Log.d(TAG, "onChanged() called with: connectionState = [" + bleDeviceDataObject.getCurrentConnectionState() + "]");
+            mCurrentState = bleDeviceDataObject.getCurrentConnectionState();
+
+            if (mCurrentState.equals(ConnectionStates.CONNECTED)) {
+                if (bleDeviceDataObject.getBluetoothDevice() != null) {
+                    onConnectedBroadcastReceived(bleDeviceDataObject.getBluetoothDevice());
+                }
+            } else if (mCurrentState.equals(ConnectionStates.DISCONNECTED)) {
+                onDisconnectedBroadcastReceived();
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mBinding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
+        initializeComponents();
         initializeUi();
     }
 
@@ -102,6 +128,20 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        DataManager.getInstance().getBleDeviceLiveData().removeObserver(mDeviceConnectionStateObserver);
+    }
+
+    @Override
+    public void initializeComponents() {
+        Log.d(TAG, "initializeComponents() called");
+
+        // Set initial state of BLE device in Live-Data as DISCONNECTED and bluetoothDevice as 'null'
+        DataManager.getInstance()
+                .setBleDeviceLiveData(new BleDeviceDataObject(ConnectionStates.DISCONNECTED, null));
+
+        // Attach observer for live-data
+        DataManager.getInstance().getBleDeviceLiveData().observeForever(mDeviceConnectionStateObserver);
     }
 
     @Override
@@ -113,7 +153,6 @@ public class MainActivity extends AppCompatActivity
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
         onConnectButtonClicked();
-        disableButtons();
     }
 
     @Override
@@ -263,6 +302,42 @@ public class MainActivity extends AppCompatActivity
         mBluetoothLeScanner.stopScan(bluetoothLeScanCallback);
         mBleDeviceList.clear();
         mRvAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Update UI when CONNECTED broadcast is received
+     */
+    @Override
+    public void onConnectedBroadcastReceived(BluetoothDevice device) {
+        Log.d(TAG, "onConnectedBroadcastReceived() called");
+
+        mDeviceName = device.getName();
+        mDeviceAddress = device.getAddress();
+
+        enableButtons();
+        onDisconnectButtonClicked();
+
+        mBinding.tvDeviceName.setText(mDeviceName);
+        mBinding.tvConnectivityStatus.setText(R.string.connected);
+        mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.green_500));
+        switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.disconnect));
+    }
+
+    /**
+     * Update UI when DISCONNECTED broadcast is received
+     */
+    @Override
+    public void onDisconnectedBroadcastReceived() {
+        Log.d(TAG, "onDisconnectedBroadcastReceived() called");
+
+        disableButtons();
+        onConnectButtonClicked();
+
+        mBinding.tvDeviceName.setText(getString(R.string.no_sensor_connected));
+        mBinding.tvConnectivityStatus.setText(R.string.no_sensor_connected);
+        mBinding.tvTemperature.setText("0");
+        mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.red_500));
+        switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.connect));
     }
 
     @Override

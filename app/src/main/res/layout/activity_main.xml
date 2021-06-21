@@ -36,7 +36,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/dp_8"
-            android:text="@string/no_sensor_connected"
             style="@style/TextView.Header.Large.Blue"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toEndOf="@id/tvConnectivityStatusHeader"/>
@@ -56,7 +55,6 @@
             android:id="@+id/tvDeviceName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/no_sensor_connected"
             android:layout_marginTop="@dimen/dp_8"
             android:layout_marginStart="@dimen/dp_8"
             style="@style/TextView.Header.Large.Blue"

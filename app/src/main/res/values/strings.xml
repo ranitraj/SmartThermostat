@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Smart Thermostat</string>
     <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
     <string name="connectivity_status">Connectivity Status: </string>
     <string name="no_sensor_connected">Not Connected</string>
     <string name="device_name">Sensor Name:</string>
@@ -14,4 +15,7 @@
     <string name="dialog_positive_button">Start</string>
     <string name="dialog_neutral_button">Dismiss</string>
     <string name="dialog_negative_button">Stop</string>
+
+    <string name="connected">CONNECTED</string>
+    <string name="disconnected">DISCONNECTED</string>
 </resources>

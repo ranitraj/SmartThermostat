@@ -1,5 +1,6 @@
 package com.android.ranit.smartthermostat.contract;
 
+import android.bluetooth.BluetoothDevice;
 import android.widget.Button;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -7,6 +8,7 @@ import com.airbnb.lottie.LottieAnimationView;
 public interface MainActivityContract {
     // View
     interface View {
+        void initializeComponents();
         void initializeUi();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
         void displaySnackBar(String message);
@@ -21,6 +23,9 @@ public interface MainActivityContract {
 
         void startScanning();
         void stopScanning();
+
+        void onConnectedBroadcastReceived(BluetoothDevice device);
+        void onDisconnectedBroadcastReceived();
 
         void requestPermissions();
         boolean checkPermissionsAtRuntime();
