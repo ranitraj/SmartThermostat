@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
@@ -16,6 +17,13 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
+
+import com.android.ranit.smartthermostat.common.CharacteristicTypes;
+import com.android.ranit.smartthermostat.common.GattAttributes;
+
+import java.util.UUID;
+
+import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 
 /**
  * Created by: Ranit Raj Ganguly on 22/06/2021
@@ -28,11 +36,18 @@ public class BleConnectivityService extends Service {
     public final static String ACTION_DATA_AVAILABLE = "smart.thermostat.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA = "smart.thermostat.EXTRA_DATA";
 
+    // Services
+    private BluetoothGattService mEnvironmentSensingService;
+
+    // Characteristics
+    private BluetoothGattCharacteristic mTemperatureCharacteristic;
+
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
 
     private String mBluetoothDeviceAddress;
+    private CharacteristicTypes mCharacteristicToBeRead = CharacteristicTypes.EMPTY_CHARACTERISTIC;
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -55,6 +70,8 @@ public class BleConnectivityService extends Service {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     mBluetoothGatt.discoverServices();
                 }
+            } else {
+                Log.e(TAG, "onConnectionStateChange(): GATT_FAILURE");
             }
         }
 
@@ -62,30 +79,30 @@ public class BleConnectivityService extends Service {
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             super.onServicesDiscovered(gatt, status);
             Log.d(TAG, "onServicesDiscovered() called");
+
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                // Get the 'Temperature' characteristic from 'Environment Sensing' service
+                mEnvironmentSensingService = gatt
+                        .getService(UUID.fromString(GattAttributes.ENVIRONMENTAL_SENSING_SERVICE_UUID));
+                mTemperatureCharacteristic = mEnvironmentSensingService
+                        .getCharacteristic(UUID.fromString(GattAttributes.TEMPERATURE_CHARACTERISTIC_UUID));
+
+                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+            } else {
+                Log.e(TAG, "onServicesDiscovered(): GATT_FAILURE");
+            }
         }
 
         @Override
         public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicRead(gatt, characteristic, status);
             Log.d(TAG, "onCharacteristicRead() called");
-        }
 
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            super.onCharacteristicWrite(gatt, characteristic, status);
-            Log.d(TAG, "onCharacteristicWrite() called");
-        }
-
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            Log.d(TAG, "onCharacteristicChanged() called");
-        }
-
-        @Override
-        public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            super.onDescriptorRead(gatt, descriptor, status);
-            Log.d(TAG, "onDescriptorRead() called");
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, mCharacteristicToBeRead);
+            } else {
+                Log.e(TAG, "onCharacteristicRead(): GATT_FAILURE");
+            }
         }
 
         @Override
@@ -116,6 +133,38 @@ public class BleConnectivityService extends Service {
     }
 
     /**
+     * Broadcast to update UI from Service based on GATT callbacks
+     *
+     * @param action - Type of Action (for Intent-Filter)
+     */
+    private void broadcastUpdate(final String action) {
+        final Intent intent = new Intent(action);
+        sendBroadcast(intent);
+    }
+
+    /**
+     * Broadcast to update UI and send values from characteristics of Services
+     * based on GATT callbacks.
+     *
+     * @param action - Type of Action (for Intent-Filter)
+     * @param characteristic - characteristic read from Service
+     * @param characteristicToBeRead - facilitates parsing based on type of characteristic
+     */
+     private void broadcastUpdate(final String action, BluetoothGattCharacteristic characteristic,
+                                 CharacteristicTypes characteristicToBeRead) {
+        final Intent intent = new Intent(action);
+
+        // Filter and broadcast Data based on 'CharacteristicType'
+        if (characteristicToBeRead.equals(CharacteristicTypes.TEMPERATURE)) {
+            float temperature =  (float) (characteristic.getIntValue(FORMAT_UINT16, 0) / 100);
+            Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
+            intent.putExtra(EXTRA_DATA, String.valueOf(temperature));
+        }
+
+         sendBroadcast(intent);
+    }
+
+    /**
      * Initialize reference to the Bluetooth Adapter (from Bluetooth Manager)
      *
      * @return boolean - Adapter initialization status
@@ -136,6 +185,21 @@ public class BleConnectivityService extends Service {
             }
         }
         return true;
+    }
+
+    /**
+     * Read the characteristic
+     *
+     * @param characteristic - bluetoothGattCharacteristic which is to be read
+     */
+    private void readCharacteristicFromService(BluetoothGattCharacteristic characteristic) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.e(TAG, "readBleCharacteristic: BluetoothAdapter not initialized");
+            return;
+        }
+
+        Log.d(TAG, "readBleCharacteristic() called");
+        mBluetoothGatt.readCharacteristic(characteristic);
     }
 
     /**
@@ -178,6 +242,22 @@ public class BleConnectivityService extends Service {
             return;
         }
         mBluetoothGatt.disconnect();
+    }
+
+    /**
+     * Called from activity to specify characteristic to be read on
+     * 'onServiceDiscovered()' depending upon the type
+     *
+     * @param type - CharacteristicType to be read
+     */
+    public void readCharacteristicValue(CharacteristicTypes type) {
+        // Update global-variable
+        mCharacteristicToBeRead = type;
+
+        // Read appropriate Characteristics
+        if (mCharacteristicToBeRead.equals(CharacteristicTypes.TEMPERATURE)) {
+            readCharacteristicFromService(mTemperatureCharacteristic);
+        }
     }
 
     /**

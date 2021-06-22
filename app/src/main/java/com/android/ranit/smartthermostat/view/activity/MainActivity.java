@@ -16,9 +16,12 @@ import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -32,6 +35,7 @@ import android.widget.Button;
 
 import com.airbnb.lottie.LottieAnimationView;
 import com.android.ranit.smartthermostat.R;
+import com.android.ranit.smartthermostat.common.CharacteristicTypes;
 import com.android.ranit.smartthermostat.common.ConnectionStates;
 import com.android.ranit.smartthermostat.common.Constants;
 import com.android.ranit.smartthermostat.contract.MainActivityContract;
@@ -102,6 +106,27 @@ public class MainActivity extends AppCompatActivity
     };
 
     /**
+     * Broadcast Receiver to communicate and update UI components from Service
+     */
+    private final BroadcastReceiver mGattStatusBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+
+            if (BleConnectivityService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                Log.d(TAG, "onReceive: ACTION_GATT_SERVICES_DISCOVERED");
+
+            } else if (BleConnectivityService.ACTION_DATA_AVAILABLE.equals(action)) {
+                Log.d(TAG, "onReceive: ACTION_DATA_AVAILABLE");
+
+                // Receive temperature via broadcast intent and display in UI
+                String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+                mBinding.tvTemperature.setText(temperature);
+            }
+        }
+    };
+
+    /**
      * Observer for current-connection-state of BLE device
      */
     private final Observer<BleDeviceDataObject> mDeviceConnectionStateObserver = new Observer<BleDeviceDataObject>() {
@@ -133,6 +158,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
+        registerToGattBroadcastReceiver();
         requestPermissions();
     }
 
@@ -149,6 +175,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         super.onStop();
+        unregisterFromGattBroadcastReceiver();
     }
 
     @Override
@@ -181,7 +208,8 @@ public class MainActivity extends AppCompatActivity
         startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, false);
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
-        onConnectButtonClicked();
+        prepareConnectButton();
+        prepareReadTemperatureButton();
     }
 
     @Override
@@ -239,14 +267,14 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onConnectButtonClicked() {
-        Log.d(TAG, "onConnectButtonClicked() called");
+    public void prepareConnectButton() {
+        Log.d(TAG, "prepareConnectButton() called");
         mBinding.btnStartScanning.setOnClickListener(connectButtonClickListener);
     }
 
     @Override
-    public void onDisconnectButtonClicked() {
-        Log.d(TAG, "onDisconnectButtonClicked() called");
+    public void prepareDisconnectButton() {
+        Log.d(TAG, "prepareDisconnectButton() called");
         mBinding.btnStartScanning.setOnClickListener(disconnectButtonClickListener);
     }
 
@@ -294,6 +322,12 @@ public class MainActivity extends AppCompatActivity
             }
         });
         dialog.show();
+    }
+
+    @Override
+    public void prepareReadTemperatureButton() {
+        Log.d(TAG, "prepareReadTemperatureButton() called");
+        mBinding.btnReadTemperature.setOnClickListener(readTemperatureButtonClickListener);
     }
 
     /**
@@ -351,7 +385,7 @@ public class MainActivity extends AppCompatActivity
         mDeviceAddress = device.getAddress();
 
         enableButtons();
-        onDisconnectButtonClicked();
+        prepareDisconnectButton();
         updateAdapterConnectionState(-1);
 
         mBinding.tvDeviceName.setText(mDeviceName);
@@ -368,7 +402,7 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "onDisconnectedBroadcastReceived() called");
 
         disableButtons();
-        onConnectButtonClicked();
+        prepareConnectButton();
 
         mBinding.tvDeviceName.setText(getString(R.string.no_sensor_connected));
         mBinding.tvConnectivityStatus.setText(R.string.no_sensor_connected);
@@ -387,6 +421,18 @@ public class MainActivity extends AppCompatActivity
     public void unbindFromService() {
         Log.d(TAG, "unbindFromService() called");
         unbindService(mServiceConnection);
+    }
+
+    @Override
+    public void registerToGattBroadcastReceiver() {
+        Log.d(TAG, "registerToGattBroadcastReceiver() called");
+        registerReceiver(mGattStatusBroadcastReceiver, gattIntentFilters());
+    }
+
+    @Override
+    public void unregisterFromGattBroadcastReceiver() {
+        Log.d(TAG, "unregisterFromGattBroadcastReceiver() called");
+        unregisterReceiver(mGattStatusBroadcastReceiver);
     }
 
     @Override
@@ -500,6 +546,7 @@ public class MainActivity extends AppCompatActivity
     private final View.OnClickListener connectButtonClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
+            Log.d(TAG, "connectButton() clicked");
             // Launch Custom Alert-Dialog
             prepareAlertDialog();
 
@@ -516,7 +563,20 @@ public class MainActivity extends AppCompatActivity
     private final View.OnClickListener disconnectButtonClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
+            Log.d(TAG, "disconnectButton() clicked");
             disconnectFromDevice();
+        }
+    };
+
+    /**
+     * Click listener for Read-temperature button
+     * Initiates read-temperature request to BleConnectivityService for Temperature characteristic.
+     */
+    private final View.OnClickListener readTemperatureButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, "readTemperatureButton() clicked");
+            mService.readCharacteristicValue(CharacteristicTypes.TEMPERATURE);
         }
     };
 
@@ -641,5 +701,17 @@ public class MainActivity extends AppCompatActivity
     private void updateAdapterConnectionState(int position) {
         mRvAdapter.setCurrentDeviceState(mCurrentState, position);
         mRvAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Prepare Intent Filters for GATT Update Status
+     *
+     * @return intentFilter
+     */
+    private IntentFilter gattIntentFilters() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BleConnectivityService.ACTION_GATT_SERVICES_DISCOVERED);
+        intentFilter.addAction(BleConnectivityService.ACTION_DATA_AVAILABLE);
+        return intentFilter;
     }
 }

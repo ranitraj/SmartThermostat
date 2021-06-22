@@ -18,9 +18,11 @@ public interface MainActivityContract {
         void disableButtons();
         void enableButtons();
 
-        void onConnectButtonClicked();
-        void onDisconnectButtonClicked();
+        void prepareConnectButton();
+        void prepareDisconnectButton();
         void launchDeviceScanDialog();
+
+        void prepareReadTemperatureButton();
 
         void startScanning();
         void stopScanning();
@@ -30,6 +32,9 @@ public interface MainActivityContract {
 
         void bindToService();
         void unbindFromService();
+
+        void registerToGattBroadcastReceiver();
+        void unregisterFromGattBroadcastReceiver();
 
         void connectToDevice(String address);
         void disconnectFromDevice();
