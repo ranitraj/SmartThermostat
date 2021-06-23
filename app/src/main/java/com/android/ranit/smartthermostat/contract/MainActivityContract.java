@@ -23,6 +23,7 @@ public interface MainActivityContract {
         void launchDeviceScanDialog();
 
         void prepareReadTemperatureButton();
+        void prepareNotifyTemperatureButton();
 
         void startScanning();
         void stopScanning();
@@ -38,7 +39,6 @@ public interface MainActivityContract {
 
         void connectToDevice(String address);
         void disconnectFromDevice();
-
 
         void requestPermissions();
         boolean checkPermissionsAtRuntime();

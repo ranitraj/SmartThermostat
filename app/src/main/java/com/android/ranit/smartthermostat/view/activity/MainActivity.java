@@ -210,6 +210,7 @@ public class MainActivity extends AppCompatActivity
 
         prepareConnectButton();
         prepareReadTemperatureButton();
+        prepareNotifyTemperatureButton();
     }
 
     @Override
@@ -328,6 +329,12 @@ public class MainActivity extends AppCompatActivity
     public void prepareReadTemperatureButton() {
         Log.d(TAG, "prepareReadTemperatureButton() called");
         mBinding.btnReadTemperature.setOnClickListener(readTemperatureButtonClickListener);
+    }
+
+    @Override
+    public void prepareNotifyTemperatureButton() {
+        Log.d(TAG, "prepareNotifyTemperatureButton() called");
+        mBinding.btnEnableNotify.setOnClickListener(notifyTemperatureButtonClickListener);
     }
 
     /**
@@ -571,12 +578,34 @@ public class MainActivity extends AppCompatActivity
     /**
      * Click listener for Read-temperature button
      * Initiates read-temperature request to BleConnectivityService for Temperature characteristic.
+     *
+     * Once service is discovered, we filter out the necessary characteristic in 'onServiceDiscovered'
+     * callback of the BleGatt and read the same using 'readCharacteristic'.
+     *
+     * Once characteristic is read, 'onCharacteristicRead' callback of BleGatt is triggered.
+     *
+     * Note: A characteristic is read only once.
      */
     private final View.OnClickListener readTemperatureButtonClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             Log.d(TAG, "readTemperatureButton() clicked");
             mService.readCharacteristicValue(CharacteristicTypes.TEMPERATURE);
+        }
+    };
+
+    /**
+     * Click listener for Notify-Temperature button
+     *
+     * To set the notification value, we need to tell the sensor to enables us this notification mode.
+     * We will write to the characteristic’s descriptor to set the right value: Notify or Indicate.
+     */
+    private final View.OnClickListener notifyTemperatureButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, "notifyTemperatureButton() clicked");
+            mService.notifyOnCharacteristicChanged(CharacteristicTypes.TEMPERATURE);
+            startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, true);
         }
     };
 
