@@ -82,8 +82,7 @@ public class MainActivity extends AppCompatActivity
     private final List<BluetoothDevice> mBleDeviceList = new ArrayList<>();
 
     private Intent mServiceIntent;
-    private String mDeviceName;
-    private String mDeviceAddress;
+    private boolean mIsLedButtonClicked = false;
 
     /**
      * Manage Service life-cycles
@@ -119,9 +118,17 @@ public class MainActivity extends AppCompatActivity
             } else if (BleConnectivityService.ACTION_DATA_AVAILABLE.equals(action)) {
                 Log.d(TAG, "onReceive: ACTION_DATA_AVAILABLE");
 
-                // Receive temperature via broadcast intent and display in UI
-                String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-                mBinding.tvTemperature.setText(temperature);
+                // Receive data via broadcast intent and display in UI
+                int currentType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
+
+                Log.e(TAG, "onReceive: "+currentType);
+                if (currentType == 0) {
+                    String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+                    mBinding.tvTemperature.setText(temperature);
+                } else if (currentType == 1) {
+                    String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+                    onLedBroadcastEventReceived(ledState);
+                }
             }
         }
     };
@@ -211,6 +218,7 @@ public class MainActivity extends AppCompatActivity
         prepareConnectButton();
         prepareReadTemperatureButton();
         prepareNotifyTemperatureButton();
+        prepareLedToggleButton();
     }
 
     @Override
@@ -225,6 +233,11 @@ public class MainActivity extends AppCompatActivity
         animationView.setAnimation(animationName);
         animationView.loop(loop);
         animationView.playAnimation();
+    }
+
+    @Override
+    public void stopAnimation(LottieAnimationView animationView) {
+        animationView.cancelAnimation();
     }
 
     @Override
@@ -337,6 +350,12 @@ public class MainActivity extends AppCompatActivity
         mBinding.btnEnableNotify.setOnClickListener(notifyTemperatureButtonClickListener);
     }
 
+    @Override
+    public void prepareLedToggleButton() {
+        Log.d(TAG, "prepareLedButton() called");
+        mBinding.btnToggleLed.setOnClickListener(toggleLedButtonClickListener);
+    }
+
     /**
      * Start Scanning for BLE Devices
      *
@@ -388,14 +407,14 @@ public class MainActivity extends AppCompatActivity
     public void onConnectedBroadcastReceived(BluetoothDevice device) {
         Log.d(TAG, "onConnectedBroadcastReceived() called");
 
-        mDeviceName = device.getName();
-        mDeviceAddress = device.getAddress();
+        String deviceName = device.getName();
+        String mDeviceAddress = device.getAddress();
 
         enableButtons();
         prepareDisconnectButton();
         updateAdapterConnectionState(-1);
 
-        mBinding.tvDeviceName.setText(mDeviceName);
+        mBinding.tvDeviceName.setText(deviceName);
         mBinding.tvConnectivityStatus.setText(R.string.connected);
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.green_500));
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.disconnect));
@@ -414,8 +433,24 @@ public class MainActivity extends AppCompatActivity
         mBinding.tvDeviceName.setText(getString(R.string.no_sensor_connected));
         mBinding.tvConnectivityStatus.setText(R.string.no_sensor_connected);
         mBinding.tvTemperature.setText("0");
+        stopAnimation(mBinding.lottieViewTemperature);
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.red_500));
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.connect));
+    }
+
+    @Override
+    public void onLedBroadcastEventReceived(String ledState) {
+        Log.d(TAG, "onLedBroadcastEventReceived() called with: ledState = [" + ledState + "]");
+
+        if (ledState.equals(Constants.ON)) {
+            startAnimation(mBinding.lottieViewLight, ANIMATION_LED_ON, false);
+            switchButtonText(mBinding.btnToggleLed, getString(R.string.led_on));
+            mBinding.btnToggleLed.setIcon(getResources().getDrawable(R.drawable.ic_on));
+        } else {
+            startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
+            switchButtonText(mBinding.btnToggleLed, getString(R.string.led_off));
+            mBinding.btnToggleLed.setIcon(getResources().getDrawable(R.drawable.ic_off));
+        }
     }
 
     @Override
@@ -606,6 +641,25 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "notifyTemperatureButton() clicked");
             mService.notifyOnCharacteristicChanged(CharacteristicTypes.TEMPERATURE);
             startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, true);
+        }
+    };
+
+    /**
+     * Click listener for toggle LED button
+     */
+    private final View.OnClickListener toggleLedButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, "toggleLedButton() clicked with state: "+mIsLedButtonClicked);
+            byte ledStatus;
+            if (mIsLedButtonClicked) {
+                ledStatus = 0;
+                mIsLedButtonClicked = false;
+            } else {
+                ledStatus = 1;
+                mIsLedButtonClicked = true;
+            }
+            mService.writeToLedCharacteristic(ledStatus);
         }
     };
 

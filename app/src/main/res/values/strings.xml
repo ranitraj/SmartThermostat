@@ -9,6 +9,7 @@
     <string name="notify">Notify</string>
     <string name="initial_temperature">0</string>
     <string name="led_off">Led Off</string>
+    <string name="led_on">Led On</string>
 
     <string name="dialog_title">Device Scanner</string>
     <string name="dialog_message">Nearby Sensors will be displayed below</string>

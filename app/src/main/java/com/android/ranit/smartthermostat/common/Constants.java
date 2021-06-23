@@ -6,4 +6,7 @@ public class Constants {
     public static final int REQUEST_PERMISSION_ALL = 100;
     public static final int REQUEST_PERMISSION_SETTING = 200;
     public static final int REQUEST_ENABLE_BLUETOOTH = 300;
+
+    public static final String ON = "ON";
+    public static final String OFF = "OFF";
 }

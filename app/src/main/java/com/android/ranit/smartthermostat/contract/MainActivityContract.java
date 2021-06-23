@@ -12,6 +12,7 @@ public interface MainActivityContract {
         void initializeUi();
         void clearComponents();
         void startAnimation(LottieAnimationView animationView, String animationName, boolean loop);
+        void stopAnimation(LottieAnimationView animationView);
         void displaySnackBar(String message);
         void changeVisibility(android.view.View view, int visibility);
         void switchButtonText(Button button, String text);
@@ -24,12 +25,14 @@ public interface MainActivityContract {
 
         void prepareReadTemperatureButton();
         void prepareNotifyTemperatureButton();
+        void prepareLedToggleButton();
 
         void startScanning();
         void stopScanning();
 
         void onConnectedBroadcastReceived(BluetoothDevice device);
         void onDisconnectedBroadcastReceived();
+        void onLedBroadcastEventReceived(String ledState);
 
         void bindToService();
         void unbindFromService();
