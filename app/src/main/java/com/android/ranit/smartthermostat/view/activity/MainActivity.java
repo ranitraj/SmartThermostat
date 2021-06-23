@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.databinding.DataBindingUtil;
 import androidx.lifecycle.Observer;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -120,8 +121,6 @@ public class MainActivity extends AppCompatActivity
 
                 // Receive data via broadcast intent and display in UI
                 int currentType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
-
-                Log.e(TAG, "onReceive: "+currentType);
                 if (currentType == 0) {
                     String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                     mBinding.tvTemperature.setText(temperature);
@@ -445,11 +444,11 @@ public class MainActivity extends AppCompatActivity
         if (ledState.equals(Constants.ON)) {
             startAnimation(mBinding.lottieViewLight, ANIMATION_LED_ON, false);
             switchButtonText(mBinding.btnToggleLed, getString(R.string.led_on));
-            mBinding.btnToggleLed.setIcon(getResources().getDrawable(R.drawable.ic_on));
+            mBinding.btnToggleLed.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_on, null));
         } else {
             startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
             switchButtonText(mBinding.btnToggleLed, getString(R.string.led_off));
-            mBinding.btnToggleLed.setIcon(getResources().getDrawable(R.drawable.ic_off));
+            mBinding.btnToggleLed.setIcon(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_off, null));
         }
     }
 
