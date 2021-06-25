@@ -19,4 +19,5 @@
 
     <string name="connected">CONNECTED</string>
     <string name="disconnected">DISCONNECTED</string>
+    <string name="unit_humidity">%rh</string>
 </resources>

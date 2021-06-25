@@ -19,7 +19,7 @@
             android:id="@+id/guidelineHorizontal"
             android:layout_width="@dimen/dp_0"
             android:layout_height="@dimen/dp_0"
-            app:layout_constraintGuide_percent="0.4"
+            app:layout_constraintGuide_percent="0.325"
             android:orientation="horizontal"/>
 
         <TextView
@@ -61,6 +61,17 @@
             style="@style/TextView.Header.Large.Blue"
             app:layout_constraintStart_toEndOf="@id/tvDeviceNameHeader"
             app:layout_constraintTop_toBottomOf="@id/tvConnectivityStatus"/>
+
+        <ImageView
+            android:id="@+id/btnDeviceInformation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="@dimen/dp_8"
+            android:visibility="invisible"
+            android:src="@drawable/ic_info"
+            app:layout_constraintStart_toEndOf="@id/tvDeviceName"
+            app:layout_constraintTop_toTopOf="@id/tvDeviceName"
+            app:layout_constraintBottom_toBottomOf="@id/tvDeviceName"/>
 
         <TextView
             android:id="@+id/tvTemperature"
@@ -128,17 +139,86 @@
             app:layout_constraintStart_toEndOf="@id/guidelineVertical"
             app:layout_constraintHeight_percent="0.065" />
 
+        <TextView
+            android:id="@+id/tvHumidity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/initial_temperature"
+            android:includeFontPadding="false"
+            android:layout_marginTop="@dimen/dp_40"
+            android:layout_marginEnd="@dimen/dp_8"
+            style="@style/TextView.Header.XXLarge"
+            app:layout_constraintEnd_toStartOf="@id/tvHumidityUnit"
+            app:layout_constraintTop_toBottomOf="@id/guidelineHorizontal" />
+
+        <TextView
+            android:id="@+id/tvHumidityUnit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/unit_humidity"
+            android:layout_marginBottom="@dimen/dp_16"
+            style="@style/TextView.Header.Large"
+            app:layout_constraintEnd_toStartOf="@id/guidelineVertical"
+            app:layout_constraintBottom_toTopOf="@id/btnReadHumidity"/>
+
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/lottieViewHumidity"
+            android:layout_width="@dimen/dp_0"
+            android:layout_height="@dimen/dp_0"
+            app:layout_constraintHeight_percent="0.1"
+            app:layout_constraintWidth_percent="0.25"
+            android:layout_marginTop="@dimen/dp_40"
+            android:layout_marginBottom="@dimen/dp_16"
+            android:layout_marginStart="@dimen/dp_8"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"
+            app:layout_constraintStart_toEndOf="@id/guidelineVertical"
+            app:layout_constraintTop_toBottomOf="@id/guidelineHorizontal"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnReadHumidity"
+            style="@style/Widget.MaterialComponents.Button.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/dp_0"
+            android:fontFamily="@font/cairo_semibold"
+            android:paddingStart="@dimen/dp_24"
+            android:paddingEnd="@dimen/dp_24"
+            android:layout_marginEnd="@dimen/dp_16"
+            android:text="@string/read"
+            android:textSize="@dimen/sp_16"
+            app:icon="@drawable/ic_read"
+            app:layout_constraintTop_toBottomOf="@id/tvHumidity"
+            app:layout_constraintEnd_toStartOf="@id/guidelineVertical"
+            app:layout_constraintHeight_percent="0.065" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEnableNotifyHumidity"
+            style="@style/Widget.MaterialComponents.Button.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/dp_0"
+            android:fontFamily="@font/cairo_semibold"
+            android:paddingStart="@dimen/dp_24"
+            android:paddingEnd="@dimen/dp_24"
+            android:layout_marginStart="@dimen/dp_16"
+            android:layout_marginTop="@dimen/dp_4"
+            android:text="@string/notify"
+            android:textSize="@dimen/sp_16"
+            app:icon="@drawable/ic_notification"
+            app:layout_constraintTop_toBottomOf="@id/lottieViewHumidity"
+            app:layout_constraintStart_toEndOf="@id/guidelineVertical"
+            app:layout_constraintHeight_percent="0.065" />
+
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/lottieViewLight"
             android:layout_width="@dimen/dp_0"
             android:layout_height="@dimen/dp_0"
-            android:layout_marginTop="@dimen/dp_96"
+            android:layout_marginTop="@dimen/dp_40"
             app:layout_constraintHeight_percent="0.1"
             app:layout_constraintWidth_percent="0.2"
             app:lottie_autoPlay="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/guidelineHorizontal"/>
+            app:layout_constraintTop_toBottomOf="@id/btnReadHumidity"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnToggleLed"

@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity
     private static final String ANIMATION_LED_OFF = "off.json";
     private static final String ANIMATION_SCANNING = "scanning.json";
     private static final String ANIMATION_STOPPED = "stopped.json";
+    private static final String ANIMATION_HUMIDITY = "humidity.json";
 
     private ConnectionStates mCurrentState = ConnectionStates.DISCONNECTED;
 
@@ -124,7 +125,8 @@ public class MainActivity extends AppCompatActivity
                 if (currentType == 0) {
                     String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                     mBinding.tvTemperature.setText(temperature);
-                } else if (currentType == 1) {
+                }
+                if (currentType == 1) {
                     String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                     onLedBroadcastEventReceived(ledState);
                 }
@@ -211,7 +213,8 @@ public class MainActivity extends AppCompatActivity
         Log.d(TAG, "initializeUi() called");
 
         // Prepare initial animations
-        startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, false);
+        startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, true);
+        startAnimation(mBinding.lottieViewTemperature, ANIMATION_HUMIDITY, true);
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
         prepareConnectButton();
