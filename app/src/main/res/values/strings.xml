@@ -20,4 +20,6 @@
     <string name="connected">CONNECTED</string>
     <string name="disconnected">DISCONNECTED</string>
     <string name="unit_humidity">%rh</string>
+    <string name="manufacturer_name">Manufacturer Name:</string>
+    <string name="manufacturer_model">Manufacturer Model: </string>
 </resources>

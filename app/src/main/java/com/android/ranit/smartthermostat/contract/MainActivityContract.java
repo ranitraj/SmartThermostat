@@ -22,10 +22,12 @@ public interface MainActivityContract {
         void prepareConnectButton();
         void prepareDisconnectButton();
         void launchDeviceScanDialog();
+        void showDeviceInfoBottomSheetDialog();
 
         void prepareReadTemperatureButton();
         void prepareNotifyTemperatureButton();
         void prepareLedToggleButton();
+        void prepareDeviceInfoButton();
 
         void startScanning();
         void stopScanning();

@@ -42,9 +42,11 @@ import com.android.ranit.smartthermostat.common.Constants;
 import com.android.ranit.smartthermostat.contract.MainActivityContract;
 import com.android.ranit.smartthermostat.data.BleDeviceDataObject;
 import com.android.ranit.smartthermostat.databinding.ActivityMainBinding;
+import com.android.ranit.smartthermostat.databinding.BottomSheetDeviceInformationBinding;
 import com.android.ranit.smartthermostat.model.DataManager;
 import com.android.ranit.smartthermostat.service.BleConnectivityService;
 import com.android.ranit.smartthermostat.view.adapter.BleDeviceAdapter;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -76,6 +78,8 @@ public class MainActivity extends AppCompatActivity
     private BleConnectivityService mService;
 
     private ActivityMainBinding mBinding;
+    private BottomSheetDeviceInformationBinding mBottomSheetBinding;
+
     private View mCustomAlertView;
     private RecyclerView mRecyclerView;
     private LottieAnimationView mScanningLottieView;
@@ -214,13 +218,14 @@ public class MainActivity extends AppCompatActivity
 
         // Prepare initial animations
         startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, true);
-        startAnimation(mBinding.lottieViewTemperature, ANIMATION_HUMIDITY, true);
+        startAnimation(mBinding.lottieViewHumidity, ANIMATION_HUMIDITY, true);
         startAnimation(mBinding.lottieViewLight, ANIMATION_LED_OFF, false);
 
         prepareConnectButton();
         prepareReadTemperatureButton();
         prepareNotifyTemperatureButton();
         prepareLedToggleButton();
+        prepareDeviceInfoButton();
     }
 
     @Override
@@ -264,10 +269,14 @@ public class MainActivity extends AppCompatActivity
         mBinding.btnReadTemperature.setClickable(false);
         mBinding.btnEnableNotify.setClickable(false);
         mBinding.btnToggleLed.setClickable(false);
+        mBinding.btnReadHumidity.setClickable(false);
+        mBinding.btnEnableNotifyHumidity.setClickable(false);
 
         mBinding.btnReadTemperature.setAlpha(0.4f);
         mBinding.btnEnableNotify.setAlpha(0.4f);
         mBinding.btnToggleLed.setAlpha(0.4f);
+        mBinding.btnReadHumidity.setAlpha(0.4f);
+        mBinding.btnEnableNotifyHumidity.setAlpha(0.4f);
     }
 
     @Override
@@ -276,10 +285,14 @@ public class MainActivity extends AppCompatActivity
         mBinding.btnReadTemperature.setClickable(true);
         mBinding.btnEnableNotify.setClickable(true);
         mBinding.btnToggleLed.setClickable(true);
+        mBinding.btnReadHumidity.setClickable(true);
+        mBinding.btnEnableNotifyHumidity.setClickable(true);
 
         mBinding.btnReadTemperature.setAlpha(1f);
         mBinding.btnEnableNotify.setAlpha(1f);
         mBinding.btnToggleLed.setAlpha(1f);
+        mBinding.btnReadHumidity.setAlpha(1f);
+        mBinding.btnEnableNotifyHumidity.setAlpha(1f);
     }
 
     @Override
@@ -341,6 +354,16 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public void showDeviceInfoBottomSheetDialog() {
+        Log.d(TAG, "showDeviceInfoBottomSheetDialog() called");
+        final BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(MainActivity.this);
+        mBottomSheetBinding = DataBindingUtil.inflate(LayoutInflater.from(MainActivity.this),
+                R.layout.bottom_sheet_device_information, null, false);
+        bottomSheetDialog.setContentView(mBottomSheetBinding.getRoot());
+        bottomSheetDialog.show();
+    }
+
+    @Override
     public void prepareReadTemperatureButton() {
         Log.d(TAG, "prepareReadTemperatureButton() called");
         mBinding.btnReadTemperature.setOnClickListener(readTemperatureButtonClickListener);
@@ -356,6 +379,12 @@ public class MainActivity extends AppCompatActivity
     public void prepareLedToggleButton() {
         Log.d(TAG, "prepareLedButton() called");
         mBinding.btnToggleLed.setOnClickListener(toggleLedButtonClickListener);
+    }
+
+    @Override
+    public void prepareDeviceInfoButton() {
+        Log.d(TAG, "prepareDeviceInfoButton() called");
+        mBinding.btnDeviceInformation.setOnClickListener(deviceInfoButtonClickListener);
     }
 
     /**
@@ -419,6 +448,7 @@ public class MainActivity extends AppCompatActivity
         mBinding.tvDeviceName.setText(deviceName);
         mBinding.tvConnectivityStatus.setText(R.string.connected);
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.green_500));
+        changeVisibility(mBinding.btnDeviceInformation, View.VISIBLE);
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.disconnect));
     }
 
@@ -435,7 +465,10 @@ public class MainActivity extends AppCompatActivity
         mBinding.tvDeviceName.setText(getString(R.string.no_sensor_connected));
         mBinding.tvConnectivityStatus.setText(R.string.no_sensor_connected);
         mBinding.tvTemperature.setText("0");
+        mBinding.tvHumidity.setText("0");
         stopAnimation(mBinding.lottieViewTemperature);
+        stopAnimation(mBinding.lottieViewHumidity);
+        changeVisibility(mBinding.btnDeviceInformation, View.INVISIBLE);
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.red_500));
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.connect));
     }
@@ -662,6 +695,16 @@ public class MainActivity extends AppCompatActivity
                 mIsLedButtonClicked = true;
             }
             mService.writeToLedCharacteristic(ledStatus);
+        }
+    };
+
+    /**
+     * Click listener for Device Info button
+     */
+    private final View.OnClickListener deviceInfoButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            showDeviceInfoBottomSheetDialog();
         }
     };
 
