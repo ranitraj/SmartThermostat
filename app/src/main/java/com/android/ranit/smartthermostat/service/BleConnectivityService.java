@@ -43,10 +43,13 @@ public class BleConnectivityService extends Service {
     // Services
     private BluetoothGattService mEnvironmentSensingService;
     private BluetoothGattService mLedService;
+    private BluetoothGattService mDeviceInformationService;
 
     // Characteristics
     private BluetoothGattCharacteristic mTemperatureCharacteristic;
     private BluetoothGattCharacteristic mLedCharacteristic;
+    private BluetoothGattCharacteristic mDeviceNameCharacteristic;
+    private BluetoothGattCharacteristic mDeviceModelCharacteristic;
 
     // Descriptors
     private BluetoothGattDescriptor mTemperatureDescriptor;
@@ -92,6 +95,7 @@ public class BleConnectivityService extends Service {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 setupTemperatureCharacteristic(gatt);
+                setupDeviceInformationCharacteristic(gatt);
                 setupLedCharacteristic(gatt);
 
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
@@ -193,13 +197,28 @@ public class BleConnectivityService extends Service {
             float temperature =  (float) (characteristic.getIntValue(FORMAT_UINT16, 0) / 100);
             Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
 
-            intent.putExtra(DATA_TYPE, 0);
+            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_TEMPERATURE);
             intent.putExtra(EXTRA_DATA, String.valueOf(temperature));
         } else if (characteristicToBeRead.equals(CharacteristicTypes.LED)) {
             Log.d(TAG, "broadcastUpdate: LED is: "+mLedState);
 
-            intent.putExtra(DATA_TYPE, 1);
+            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_LED);
             intent.putExtra(EXTRA_DATA, String.valueOf(mLedState));
+        } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
+            String manufacturerName = characteristic.getStringValue(0);
+            Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerName);
+
+            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_NAME);
+            intent.putExtra(EXTRA_DATA, manufacturerName);
+
+            // Initiate reading 'device-model characteristic' automatically once 'device-name' has been read
+            readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
+        } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
+            String manufacturerModel = characteristic.getStringValue(0);
+            Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerModel);
+
+            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_MODEL);
+            intent.putExtra(EXTRA_DATA, manufacturerModel);
         }
 
          sendBroadcast(intent);
@@ -326,10 +345,15 @@ public class BleConnectivityService extends Service {
     public void readCharacteristicValue(CharacteristicTypes type) {
         // Update global-variable
         mCurrentCharacteristicType = type;
+        Log.d(TAG, "readCharacteristicValue() called with type: "+mCurrentCharacteristicType);
 
         // Read appropriate Characteristics
         if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
             readCharacteristicFromService(mTemperatureCharacteristic);
+        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
+            readCharacteristicFromService(mDeviceNameCharacteristic);
+        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
+            readCharacteristicFromService(mDeviceModelCharacteristic);
         }
     }
 
@@ -342,6 +366,7 @@ public class BleConnectivityService extends Service {
     public void notifyOnCharacteristicChanged(CharacteristicTypes type) {
         // Update global-variable
         mCurrentCharacteristicType = type;
+        Log.d(TAG, "notifyOnCharacteristicChanged() called with type: "+mCurrentCharacteristicType);
 
         // Write to appropriate Characteristic
         if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
@@ -403,11 +428,34 @@ public class BleConnectivityService extends Service {
         mTemperatureDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
     }
 
-
+    /**
+     * Sets up all properties related to the LED characteristic in
+     * the Custom LED Service.
+     *
+     * @param gatt - Gatt from the onServiceDiscovered callback
+     */
     private void setupLedCharacteristic(BluetoothGatt gatt) {
         Log.d(TAG, "setupLedCharacteristic() called ");
         mLedService = gatt.getService(UUID.fromString(GattAttributes.LED_SERVICE_UUID));
         mLedCharacteristic = mLedService
                 .getCharacteristic(UUID.fromString(GattAttributes.LED_CHARACTERISTIC_UUID));
+    }
+
+    /**
+     * Sets up all properties related to the Device Model and Manufacturer characteristic in
+     * the Device Information Service.
+     *
+     * @param gatt - Gatt from the onServiceDiscovered callback
+     */
+    private void setupDeviceInformationCharacteristic(BluetoothGatt gatt) {
+        Log.d(TAG, "setupDeviceInformationCharacteristic() called");
+        mDeviceInformationService = gatt.getService(UUID.fromString(GattAttributes.DEVICE_INFORMATION_SERVICE_UUID));
+        mDeviceNameCharacteristic = mDeviceInformationService
+                .getCharacteristic(UUID.fromString(GattAttributes.MANUFACTURER_NAME_CHARACTERISTIC_UUID));
+        mDeviceModelCharacteristic = mDeviceInformationService
+                .getCharacteristic(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID));
+
+        // Read Manufacturer-Name from Characteristic
+        readCharacteristicValue(CharacteristicTypes.MANUFACTURER_NAME);
     }
 }

@@ -9,4 +9,9 @@ public class Constants {
 
     public static final String ON = "ON";
     public static final String OFF = "OFF";
+
+    public static final int DATA_TYPE_TEMPERATURE = 0;
+    public static final int DATA_TYPE_LED = 1;
+    public static final int DATA_TYPE_MANUFACTURER_NAME = 2;
+    public static final int DATA_TYPE_MANUFACTURER_MODEL = 3;
 }

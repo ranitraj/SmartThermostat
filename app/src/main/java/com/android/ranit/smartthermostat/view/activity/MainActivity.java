@@ -87,6 +87,8 @@ public class MainActivity extends AppCompatActivity
 
     private final List<BluetoothDevice> mBleDeviceList = new ArrayList<>();
 
+    private String mManufacturerName;
+    private String mManufacturerModel;
     private Intent mServiceIntent;
     private boolean mIsLedButtonClicked = false;
 
@@ -126,13 +128,16 @@ public class MainActivity extends AppCompatActivity
 
                 // Receive data via broadcast intent and display in UI
                 int currentType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
-                if (currentType == 0) {
+                if (currentType == Constants.DATA_TYPE_TEMPERATURE) {
                     String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                     mBinding.tvTemperature.setText(temperature);
-                }
-                if (currentType == 1) {
+                } else if (currentType == Constants.DATA_TYPE_LED) {
                     String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                     onLedBroadcastEventReceived(ledState);
+                } else if (currentType == Constants.DATA_TYPE_MANUFACTURER_NAME) {
+                    mManufacturerName = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+                } else if (currentType == Constants.DATA_TYPE_MANUFACTURER_MODEL) {
+                    mManufacturerModel = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
                 }
             }
         }
@@ -360,6 +365,9 @@ public class MainActivity extends AppCompatActivity
         mBottomSheetBinding = DataBindingUtil.inflate(LayoutInflater.from(MainActivity.this),
                 R.layout.bottom_sheet_device_information, null, false);
         bottomSheetDialog.setContentView(mBottomSheetBinding.getRoot());
+
+        setDataToBottomSheet();
+
         bottomSheetDialog.show();
     }
 
@@ -707,6 +715,14 @@ public class MainActivity extends AppCompatActivity
             showDeviceInfoBottomSheetDialog();
         }
     };
+
+    /**
+     * Sets Manufacturer Name and Model to bottom Sheet received from Broadcast
+     */
+    private void setDataToBottomSheet() {
+        mBottomSheetBinding.tvManufacturerName.setText(mManufacturerName);
+        mBottomSheetBinding.tvManufacturerModelName.setText(mManufacturerModel);
+    }
 
     /**
      * Initializing 'ScanSettings' parameter for 'BLE device Scanning' via Builder Pattern
