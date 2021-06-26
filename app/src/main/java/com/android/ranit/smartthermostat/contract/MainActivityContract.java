@@ -1,6 +1,7 @@
 package com.android.ranit.smartthermostat.contract;
 
 import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.widget.Button;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -26,6 +27,8 @@ public interface MainActivityContract {
 
         void prepareReadTemperatureButton();
         void prepareNotifyTemperatureButton();
+        void prepareReadHumidityButton();
+        void prepareNotifyHumidityButton();
         void prepareLedToggleButton();
         void prepareDeviceInfoButton();
 
@@ -34,6 +37,7 @@ public interface MainActivityContract {
 
         void onConnectedBroadcastReceived(BluetoothDevice device);
         void onDisconnectedBroadcastReceived();
+        void handleDataReceivedBroadcast(Intent intent);
         void onLedBroadcastEventReceived(String ledState);
 
         void bindToService();

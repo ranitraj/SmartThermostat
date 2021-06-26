@@ -47,6 +47,7 @@ public class BleConnectivityService extends Service {
 
     // Characteristics
     private BluetoothGattCharacteristic mTemperatureCharacteristic;
+    private BluetoothGattCharacteristic mHumidityCharacteristic;
     private BluetoothGattCharacteristic mLedCharacteristic;
     private BluetoothGattCharacteristic mDeviceNameCharacteristic;
     private BluetoothGattCharacteristic mDeviceModelCharacteristic;
@@ -95,6 +96,7 @@ public class BleConnectivityService extends Service {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 setupTemperatureCharacteristic(gatt);
+                setupHumidityCharacteristic(gatt);
                 setupDeviceInformationCharacteristic(gatt);
                 setupLedCharacteristic(gatt);
 
@@ -193,32 +195,44 @@ public class BleConnectivityService extends Service {
         final Intent intent = new Intent(action);
 
         // Filter and broadcast Data based on 'CharacteristicType'
-        if (characteristicToBeRead.equals(CharacteristicTypes.TEMPERATURE)) {
-            float temperature =  (float) (characteristic.getIntValue(FORMAT_UINT16, 0) / 100);
-            Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
+         if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
+             String manufacturerName = characteristic.getStringValue(0);
+             Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerName);
+
+             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_NAME);
+             intent.putExtra(EXTRA_DATA, manufacturerName);
+
+             // Initiate reading 'device-model characteristic' automatically once 'device-name' has been read
+             readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
+         } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
+             String manufacturerModel = characteristic.getStringValue(0);
+             Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerModel);
+
+             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_MODEL);
+             intent.putExtra(EXTRA_DATA, manufacturerModel);
+         } else if (characteristicToBeRead.equals(CharacteristicTypes.TEMPERATURE)) {
+            int temperatureInteger = (characteristic.getIntValue(FORMAT_UINT16, 0));
+
+             // Need a resolution of 0.01 degrees Celsius, so dividing 'temperature' by 100
+             float temperature = (temperatureInteger / 100f);
+             Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
 
             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_TEMPERATURE);
             intent.putExtra(EXTRA_DATA, String.valueOf(temperature));
-        } else if (characteristicToBeRead.equals(CharacteristicTypes.LED)) {
+        } else if (characteristicToBeRead.equals(CharacteristicTypes.HUMIDITY)) {
+             int humidityInteger = (characteristic.getIntValue(FORMAT_UINT16, 0));
+
+             // Need a resolution of 0.01 percent, so dividing 'humidity' by 100
+             float humidity = (humidityInteger / 100f);
+             Log.d(TAG, "broadcastUpdate: Received Humidity: "+humidity);
+
+             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_HUMIDITY);
+             intent.putExtra(EXTRA_DATA, String.valueOf(humidity));
+         } else if (characteristicToBeRead.equals(CharacteristicTypes.LED)) {
             Log.d(TAG, "broadcastUpdate: LED is: "+mLedState);
 
             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_LED);
             intent.putExtra(EXTRA_DATA, String.valueOf(mLedState));
-        } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
-            String manufacturerName = characteristic.getStringValue(0);
-            Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerName);
-
-            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_NAME);
-            intent.putExtra(EXTRA_DATA, manufacturerName);
-
-            // Initiate reading 'device-model characteristic' automatically once 'device-name' has been read
-            readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
-        } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
-            String manufacturerModel = characteristic.getStringValue(0);
-            Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerModel);
-
-            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_MODEL);
-            intent.putExtra(EXTRA_DATA, manufacturerModel);
         }
 
          sendBroadcast(intent);
@@ -257,8 +271,6 @@ public class BleConnectivityService extends Service {
             Log.e(TAG, "readCharacteristicFromService: BluetoothAdapter not initialized");
             return;
         }
-
-        Log.d(TAG, "readBleCharacteristic() called");
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
@@ -272,8 +284,6 @@ public class BleConnectivityService extends Service {
             Log.e(TAG, "notifyCharacteristicFromService: BluetoothAdapter not initialized");
             return;
         }
-
-        Log.d(TAG, "notifyCharacteristicFromService() called");
         mBluetoothGatt.writeDescriptor(descriptor);
     }
 
@@ -287,8 +297,6 @@ public class BleConnectivityService extends Service {
             Log.e(TAG, "writeCharacteristicToService: BluetoothAdapter not initialized");
             return;
         }
-
-        Log.d(TAG, "writeCharacteristicToService() called");
         characteristic.setWriteType(WRITE_TYPE_DEFAULT);
         characteristic.setValue(data);
         mBluetoothGatt.writeCharacteristic(characteristic);
@@ -354,6 +362,8 @@ public class BleConnectivityService extends Service {
             readCharacteristicFromService(mDeviceNameCharacteristic);
         } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
             readCharacteristicFromService(mDeviceModelCharacteristic);
+        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.HUMIDITY)) {
+            readCharacteristicFromService(mHumidityCharacteristic);
         }
     }
 
@@ -429,6 +439,18 @@ public class BleConnectivityService extends Service {
     }
 
     /**
+     * Sets up all properties related to the Humidity characteristic in
+     * the Environment Sensing Service.
+     *
+     * @param gatt - Gatt from the onServiceDiscovered callback
+     */
+    private void setupHumidityCharacteristic(BluetoothGatt gatt) {
+        Log.d(TAG, "setupHumidityCharacteristic() called");
+        mHumidityCharacteristic = mEnvironmentSensingService
+                .getCharacteristic(UUID.fromString(GattAttributes.HUMIDITY_CHARACTERISTIC_UUID));
+    }
+
+    /**
      * Sets up all properties related to the LED characteristic in
      * the Custom LED Service.
      *
@@ -456,6 +478,7 @@ public class BleConnectivityService extends Service {
                 .getCharacteristic(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID));
 
         // Read Manufacturer-Name from Characteristic
+        // Once successfully read, initiate Read Manufacturer-Model from broadcast
         readCharacteristicValue(CharacteristicTypes.MANUFACTURER_NAME);
     }
 }

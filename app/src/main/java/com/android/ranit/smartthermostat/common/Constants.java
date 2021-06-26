@@ -14,4 +14,5 @@ public class Constants {
     public static final int DATA_TYPE_LED = 1;
     public static final int DATA_TYPE_MANUFACTURER_NAME = 2;
     public static final int DATA_TYPE_MANUFACTURER_MODEL = 3;
+    public static final int DATA_TYPE_HUMIDITY = 4;
 }

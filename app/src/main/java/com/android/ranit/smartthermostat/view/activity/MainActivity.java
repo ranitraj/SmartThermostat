@@ -127,18 +127,7 @@ public class MainActivity extends AppCompatActivity
                 Log.d(TAG, "onReceive: ACTION_DATA_AVAILABLE");
 
                 // Receive data via broadcast intent and display in UI
-                int currentType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
-                if (currentType == Constants.DATA_TYPE_TEMPERATURE) {
-                    String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-                    mBinding.tvTemperature.setText(temperature);
-                } else if (currentType == Constants.DATA_TYPE_LED) {
-                    String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-                    onLedBroadcastEventReceived(ledState);
-                } else if (currentType == Constants.DATA_TYPE_MANUFACTURER_NAME) {
-                    mManufacturerName = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-                } else if (currentType == Constants.DATA_TYPE_MANUFACTURER_MODEL) {
-                    mManufacturerModel = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-                }
+                handleDataReceivedBroadcast(intent);
             }
         }
     };
@@ -229,6 +218,7 @@ public class MainActivity extends AppCompatActivity
         prepareConnectButton();
         prepareReadTemperatureButton();
         prepareNotifyTemperatureButton();
+        prepareReadHumidityButton();
         prepareLedToggleButton();
         prepareDeviceInfoButton();
     }
@@ -384,6 +374,18 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    public void prepareReadHumidityButton() {
+        Log.d(TAG, "prepareReadHumidityButton() called");
+        mBinding.btnReadHumidity.setOnClickListener(readyHumidityButtonClickListener);
+    }
+
+    @Override
+    public void prepareNotifyHumidityButton() {
+        Log.d(TAG, "prepareNotifyHumidityButton() called");
+        // mBinding.btnEnableNotifyHumidity.setOnClickListener();
+    }
+
+    @Override
     public void prepareLedToggleButton() {
         Log.d(TAG, "prepareLedButton() called");
         mBinding.btnToggleLed.setOnClickListener(toggleLedButtonClickListener);
@@ -479,6 +481,26 @@ public class MainActivity extends AppCompatActivity
         changeVisibility(mBinding.btnDeviceInformation, View.INVISIBLE);
         mBinding.tvConnectivityStatus.setTextColor(getResources().getColor(R.color.red_500));
         switchButtonText(mBinding.btnStartScanning, getResources().getString(R.string.connect));
+    }
+
+    @Override
+    public void handleDataReceivedBroadcast(Intent intent) {
+        int currentBroadcastType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
+
+        if (currentBroadcastType == Constants.DATA_TYPE_TEMPERATURE) {
+            String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+            mBinding.tvTemperature.setText(temperature);
+        } else if (currentBroadcastType == Constants.DATA_TYPE_HUMIDITY) {
+            String humidity = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+            mBinding.tvHumidity.setText(humidity);
+        } else if (currentBroadcastType == Constants.DATA_TYPE_LED) {
+            String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+            onLedBroadcastEventReceived(ledState);
+        } else if (currentBroadcastType == Constants.DATA_TYPE_MANUFACTURER_NAME) {
+            mManufacturerName = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+        } else if (currentBroadcastType == Constants.DATA_TYPE_MANUFACTURER_MODEL) {
+            mManufacturerModel = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
+        }
     }
 
     @Override
@@ -684,6 +706,18 @@ public class MainActivity extends AppCompatActivity
             Log.d(TAG, "notifyTemperatureButton() clicked");
             mService.notifyOnCharacteristicChanged(CharacteristicTypes.TEMPERATURE);
             startAnimation(mBinding.lottieViewTemperature, ANIMATION_TEMPERATURE, true);
+        }
+    };
+
+    /**
+     * Click listener for Read-temperature button
+     * Initiates read-temperature request to BleConnectivityService for Humidity characteristic.
+     */
+    private final View.OnClickListener readyHumidityButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, "readTHumidityButton() clicked");
+            mService.readCharacteristicValue(CharacteristicTypes.HUMIDITY);
         }
     };
 
