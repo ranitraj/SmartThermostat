@@ -83,6 +83,9 @@ public class BleConnectivityService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
                     mBluetoothGatt.discoverServices();
+                } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    // Close GATT server to clear resources properly
+                    mBluetoothGatt.close();
                 }
             } else {
                 Log.e(TAG, "onConnectionStateChange(): GATT_FAILURE");

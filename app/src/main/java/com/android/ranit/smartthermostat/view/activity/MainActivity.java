@@ -376,7 +376,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void prepareReadHumidityButton() {
         Log.d(TAG, "prepareReadHumidityButton() called");
-        mBinding.btnReadHumidity.setOnClickListener(readyHumidityButtonClickListener);
+        mBinding.btnReadHumidity.setOnClickListener(readHumidityButtonClickListener);
     }
 
     @Override
@@ -713,10 +713,10 @@ public class MainActivity extends AppCompatActivity
      * Click listener for Read-temperature button
      * Initiates read-temperature request to BleConnectivityService for Humidity characteristic.
      */
-    private final View.OnClickListener readyHumidityButtonClickListener = new View.OnClickListener() {
+    private final View.OnClickListener readHumidityButtonClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-            Log.d(TAG, "readTHumidityButton() clicked");
+            Log.d(TAG, "readHumidityButton() clicked");
             mService.readCharacteristicValue(CharacteristicTypes.HUMIDITY);
         }
     };
