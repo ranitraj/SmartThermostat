@@ -16,14 +16,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SmartThermostat">
-        <activity android:name=".view.activity.SplashScreenActivity">
+        <activity android:name=".view.activity.SplashScreenActivity"
+            android:screenOrientation="portrait" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".view.activity.MainActivity">
+        <activity android:name=".view.activity.MainActivity"
+            android:screenOrientation="portrait" >
         </activity>
 
         <!-- Broadcast Receiver to receive Bluetooth Connection events -->
