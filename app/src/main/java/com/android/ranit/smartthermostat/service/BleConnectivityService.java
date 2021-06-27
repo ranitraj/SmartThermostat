@@ -27,8 +27,12 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.UUID;
 
+import static android.bluetooth.BluetoothDevice.BOND_BONDED;
+import static android.bluetooth.BluetoothDevice.BOND_BONDING;
+import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
 import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE;
 import static android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
 
 /**
@@ -53,7 +57,7 @@ public class BleConnectivityService extends Service {
     private BluetoothGattDescriptor mTemperatureDescriptor;
     private BluetoothGattDescriptor mHumidityDescriptor;
 
-    // Priority Queue (Since, ONLY 1 characteristic is read at a time)
+    // Command-Queue (Since, ONLY 1 characteristic is read at a time)
     private final Queue<Runnable> mCommandQueue = new LinkedList<>();
     private final Handler mBleHandler = new Handler();
     private boolean mIsCommandQueueBusy = false;
@@ -68,7 +72,6 @@ public class BleConnectivityService extends Service {
     private String mLedState;
     private boolean mIsNotifyTemperatureEnabled;
     private boolean mIsNotifyHumidityEnabled;
-    private boolean mIsReadCommandExecutedSuccessfully;
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -89,7 +92,18 @@ public class BleConnectivityService extends Service {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
-                    mBluetoothGatt.discoverServices();
+                    int bondState = gatt.getDevice().getBondState();
+
+                    // Take action depending on the bond state
+                    if (bondState == BOND_NONE || bondState == BOND_BONDED) {
+                        Log.d(TAG, "onConnectionStateChange: Connected to device [" + gatt.getDevice().getName() + "], " +
+                                "start discovering services");
+                        mBluetoothGatt.discoverServices();
+
+                    } else if (bondState == BOND_BONDING) {
+                        Log.i(TAG, "onConnectionStateChange: Waiting for bonding to complete");
+                    }
+
                 } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     // Close GATT server to clear resources properly
                     mBluetoothGatt.close();
@@ -297,16 +311,16 @@ public class BleConnectivityService extends Service {
      *
      * @param characteristic - bluetoothGattCharacteristic which is to be read
      */
-    private boolean readCharacteristicFromService(BluetoothGattCharacteristic characteristic) {
+    private void readCharacteristicFromService(BluetoothGattCharacteristic characteristic) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
             Log.e(TAG, "readCharacteristicFromService: BluetoothAdapter not initialized or characteristic is null");
-            return false;
+            return;
         }
 
         // Check if characteristic has READ property enabled
         if ((characteristic.getProperties() & PROPERTY_READ) == 0) {
             Log.e(TAG, "readCharacteristicFromService: Characteristic cannot be read");
-            return false;
+            return;
         }
 
         // Enqueue the read command into Queue
@@ -328,7 +342,6 @@ public class BleConnectivityService extends Service {
         } else {
             Log.e(TAG, "readCharacteristicFromService: Couldn't enqueue read characteristic");
         }
-        return result;
     }
 
     /**
@@ -350,15 +363,20 @@ public class BleConnectivityService extends Service {
      * @param characteristic - bluetoothGattCharacteristic into which to write
      */
     private void writeCharacteristicToService(BluetoothGattCharacteristic characteristic, byte[] data) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.e(TAG, "writeCharacteristicToService: BluetoothAdapter not initialized");
+        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
+            Log.e(TAG, "readCharacteristicFromService: BluetoothAdapter not initialized or characteristic is null");
             return;
         }
+
+        // Check if Write is enabled for the characteristic
+        if((characteristic.getProperties() & PROPERTY_WRITE) == 0 ) {
+            Log.e(TAG, "writeCharacteristicToService: Characteristic doesn't have Write permission");
+            return;
+        }
+
         characteristic.setWriteType(WRITE_TYPE_DEFAULT);
         characteristic.setValue(data);
         mBluetoothGatt.writeCharacteristic(characteristic);
-
-
     }
 
     /**
@@ -485,11 +503,9 @@ public class BleConnectivityService extends Service {
 
         // Read appropriate Characteristics
         if (type.equals(CharacteristicTypes.TEMPERATURE)) {
-            mIsReadCommandExecutedSuccessfully =
-                    readCharacteristicFromService(mTemperatureCharacteristic);
+            readCharacteristicFromService(mTemperatureCharacteristic);
         } else if (type.equals(CharacteristicTypes.HUMIDITY)) {
-            mIsReadCommandExecutedSuccessfully =
-                    readCharacteristicFromService(mHumidityCharacteristic);
+            readCharacteristicFromService(mHumidityCharacteristic);
         }
     }
 
