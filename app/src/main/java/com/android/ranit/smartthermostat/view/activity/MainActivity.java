@@ -277,6 +277,7 @@ public class MainActivity extends AppCompatActivity
         prepareReadTemperatureButton();
         prepareNotifyTemperatureButton();
         prepareReadHumidityButton();
+        prepareNotifyHumidityButton();
         prepareLedToggleButton();
     }
 
@@ -439,7 +440,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void prepareNotifyHumidityButton() {
         Log.d(TAG, "prepareNotifyHumidityButton() called");
-        // mBinding.btnEnableNotifyHumidity.setOnClickListener();
+        mBinding.btnEnableNotifyHumidity.setOnClickListener(notifyHumidityButtonClickListener);
     }
 
     @Override
@@ -755,7 +756,7 @@ public class MainActivity extends AppCompatActivity
     };
 
     /**
-     * Click listener for Read-temperature button
+     * Click listener for Read-humidity button
      * Initiates read-temperature request to BleConnectivityService for Humidity characteristic.
      */
     private final View.OnClickListener readHumidityButtonClickListener = new View.OnClickListener() {
@@ -763,6 +764,18 @@ public class MainActivity extends AppCompatActivity
         public void onClick(View view) {
             Log.d(TAG, "readHumidityButton() clicked");
             mService.readCharacteristicValue(CharacteristicTypes.HUMIDITY);
+        }
+    };
+
+    /**
+     * Click listener for Notify-humidity button
+     * Initiates read-temperature request to BleConnectivityService for Humidity characteristic.
+     */
+    private final View.OnClickListener notifyHumidityButtonClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Log.d(TAG, "notifyHumidityButton() clicked");
+            mService.notifyOnCharacteristicChanged(CharacteristicTypes.HUMIDITY);
         }
     };
 

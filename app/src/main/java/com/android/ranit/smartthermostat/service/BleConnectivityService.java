@@ -51,6 +51,7 @@ public class BleConnectivityService extends Service {
 
     // Descriptors
     private BluetoothGattDescriptor mTemperatureDescriptor;
+    private BluetoothGattDescriptor mHumidityDescriptor;
 
     // Priority Queue (Since, ONLY 1 characteristic is read at a time)
     private final Queue<Runnable> mCommandQueue = new LinkedList<>();
@@ -65,8 +66,9 @@ public class BleConnectivityService extends Service {
 
     private String mBluetoothDeviceAddress;
     private String mLedState;
+    private boolean mIsNotifyTemperatureEnabled;
+    private boolean mIsNotifyHumidityEnabled;
     private boolean mIsReadCommandExecutedSuccessfully;
-    private CharacteristicTypes mCurrentCharacteristicType = CharacteristicTypes.EMPTY_CHARACTERISTIC;
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -147,8 +149,16 @@ public class BleConnectivityService extends Service {
             Log.d(TAG, "onDescriptorWrite() called");
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                mTemperatureCharacteristic.setValue(new byte[]{1, 1});
-                gatt.writeCharacteristic(mTemperatureCharacteristic);
+                // Temperature
+                if (mIsNotifyTemperatureEnabled) {
+                    mTemperatureCharacteristic.setValue(new byte[]{1, 1});
+                    gatt.writeCharacteristic(mTemperatureCharacteristic);
+                }
+                // Humidity
+                if (mIsNotifyHumidityEnabled) {
+                    mHumidityCharacteristic.setValue(new byte[]{1, 1});
+                    gatt.writeCharacteristic(mHumidityCharacteristic);
+                }
             } else {
                 Log.e(TAG, "onDescriptorWrite(): GATT_FAILURE");
             }
@@ -471,14 +481,13 @@ public class BleConnectivityService extends Service {
      */
     public void readCharacteristicValue(CharacteristicTypes type) {
         // Update global-variable
-        mCurrentCharacteristicType = type;
-        Log.d(TAG, "readCharacteristicValue() called with type: "+mCurrentCharacteristicType);
+        Log.d(TAG, "readCharacteristicValue() called with type: "+ type);
 
         // Read appropriate Characteristics
-        if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
+        if (type.equals(CharacteristicTypes.TEMPERATURE)) {
             mIsReadCommandExecutedSuccessfully =
                     readCharacteristicFromService(mTemperatureCharacteristic);
-        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.HUMIDITY)) {
+        } else if (type.equals(CharacteristicTypes.HUMIDITY)) {
             mIsReadCommandExecutedSuccessfully =
                     readCharacteristicFromService(mHumidityCharacteristic);
         }
@@ -491,13 +500,15 @@ public class BleConnectivityService extends Service {
      * @param type - CharacteristicType to be read
      */
     public void notifyOnCharacteristicChanged(CharacteristicTypes type) {
-        // Update global-variable
-        mCurrentCharacteristicType = type;
-        Log.d(TAG, "notifyOnCharacteristicChanged() called with type: "+mCurrentCharacteristicType);
+        Log.d(TAG, "notifyOnCharacteristicChanged() called with type: "+ type);
 
         // Write to appropriate Characteristic
-        if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
+        if (type.equals(CharacteristicTypes.TEMPERATURE)) {
+            mIsNotifyTemperatureEnabled = true;
             notifyCharacteristicFromService(mTemperatureDescriptor);
+        } else if (type.equals(CharacteristicTypes.HUMIDITY)) {
+            mIsNotifyHumidityEnabled = true;
+            notifyCharacteristicFromService(mHumidityDescriptor);
         }
     }
 
@@ -565,6 +576,11 @@ public class BleConnectivityService extends Service {
         Log.d(TAG, "setupHumidityCharacteristic() called");
         mHumidityCharacteristic = mEnvironmentSensingService
                 .getCharacteristic(UUID.fromString(GattAttributes.HUMIDITY_CHARACTERISTIC_UUID));
+
+        gatt.setCharacteristicNotification(mHumidityCharacteristic, true);
+        mHumidityDescriptor = mHumidityCharacteristic
+                .getDescriptor(UUID.fromString(GattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+        mHumidityDescriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
     }
 
     /**
