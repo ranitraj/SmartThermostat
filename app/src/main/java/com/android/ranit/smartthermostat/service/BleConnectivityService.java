@@ -13,6 +13,7 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -22,9 +23,12 @@ import com.android.ranit.smartthermostat.common.CharacteristicTypes;
 import com.android.ranit.smartthermostat.common.Constants;
 import com.android.ranit.smartthermostat.common.GattAttributes;
 
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.UUID;
 
 import static android.bluetooth.BluetoothGattCharacteristic.FORMAT_UINT16;
+import static android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ;
 import static android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
 
 /**
@@ -55,12 +59,20 @@ public class BleConnectivityService extends Service {
     // Descriptors
     private BluetoothGattDescriptor mTemperatureDescriptor;
 
+    // Priority Queue (Since, ONLY 1 characteristic is read at a time)
+    private Queue<Runnable> mCommandQueue = new LinkedList<>();
+    private Handler mBleHandler = new Handler();
+    private boolean mIsCommandQueueBusy;
+    private boolean mIsCommandQueueRetrying;
+    private int mNumberOfTries = 0;
+
     private BluetoothManager mBluetoothManager;
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothGatt mBluetoothGatt;
 
     private String mBluetoothDeviceAddress;
     private String mLedState;
+    private boolean mIsReadCommandExecutedSuccessfully;
     private CharacteristicTypes mCurrentCharacteristicType = CharacteristicTypes.EMPTY_CHARACTERISTIC;
 
     private final IBinder mBinder = new LocalBinder();
@@ -116,8 +128,11 @@ public class BleConnectivityService extends Service {
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, mCurrentCharacteristicType);
+
+                completedCommand();
             } else {
                 Log.e(TAG, "onCharacteristicRead(): GATT_FAILURE");
+                completedCommand();
             }
         }
 
@@ -205,8 +220,6 @@ public class BleConnectivityService extends Service {
              intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_NAME);
              intent.putExtra(EXTRA_DATA, manufacturerName);
 
-             // Initiate reading 'device-model characteristic' automatically once 'device-name' has been read
-             readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
          } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
              String manufacturerModel = characteristic.getStringValue(0);
              Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerModel);
@@ -269,12 +282,107 @@ public class BleConnectivityService extends Service {
      *
      * @param characteristic - bluetoothGattCharacteristic which is to be read
      */
-    private void readCharacteristicFromService(BluetoothGattCharacteristic characteristic) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.e(TAG, "readCharacteristicFromService: BluetoothAdapter not initialized");
+    private boolean readCharacteristicFromService(BluetoothGattCharacteristic characteristic) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null || characteristic == null) {
+            Log.e(TAG, "readCharacteristicFromService: BluetoothAdapter not initialized or characteristic is null");
+            return false;
+        }
+
+        // Check if characteristic has READ property enabled
+        if ((characteristic.getProperties() & PROPERTY_READ) == 0) {
+            Log.e(TAG, "readCharacteristicFromService: Characteristic cannot be read");
+            return false;
+        }
+
+        // Enqueue the read command into Queue
+        boolean result = mCommandQueue.add(new Runnable() {
+            @Override
+            public void run() {
+                if (!mBluetoothGatt.readCharacteristic(characteristic)) {
+                    Log.e(TAG, "run: Failed to read Characteristic: "+characteristic.getUuid());
+                    completedCommand();
+                } else {
+                    mNumberOfTries++;
+                }
+             }
+        });
+
+        if (result) {
+            executeNextCommand();
+        } else {
+            Log.e(TAG, "readCharacteristicFromService: Couldn't enqueue read characteristic");
+        }
+        return result;
+    }
+
+    /**
+     * Reset variables and command-queue once a command is completed
+     */
+    private void completedCommand() {
+        Log.d(TAG, "completedCommand() called");
+        mIsCommandQueueBusy = false;
+        mIsCommandQueueRetrying = false;
+        mCommandQueue.poll();
+        executeNextCommand();
+    }
+
+    /**
+     * Executes next command
+     */
+    private void executeNextCommand() {
+        Log.d(TAG, "executeNextCommand() called");
+        // Return, if some existing command is being executed
+        if (mIsCommandQueueBusy) {
             return;
         }
-        mBluetoothGatt.readCharacteristic(characteristic);
+
+        // Check if GATT object is Invalid
+        if (mBluetoothGatt == null) {
+            Log.e(TAG, "executeNextCommand: GATT is null, so clearing Command Queue");
+            mCommandQueue.clear();
+            mIsCommandQueueBusy = false;
+            return;
+        }
+
+        // Execute next command
+        if (mCommandQueue.size() > 0) {
+            final Runnable currentCommand = mCommandQueue.peek();
+            mIsCommandQueueBusy = true;
+            mNumberOfTries = 0;
+
+            mBleHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        if (currentCommand != null) {
+                            currentCommand.run();
+                        }
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Retry current command enqueued into the Command-Queue
+     */
+    private void retryCommand() {
+        Log.d(TAG, "retryCommand() called");
+        mIsCommandQueueBusy = false;
+        Runnable currentCommand = mCommandQueue.peek();
+
+        if (currentCommand != null) {
+            if (mNumberOfTries >= Constants.COMMAND_QUEUE_MAX_TRIES) {
+                Log.e(TAG, "retryCommand: Maximum retry limit reached");
+                mCommandQueue.poll();
+            } else {
+                mIsCommandQueueRetrying = true;
+            }
+        }
+
+        executeNextCommand();
     }
 
     /**
@@ -360,13 +468,17 @@ public class BleConnectivityService extends Service {
 
         // Read appropriate Characteristics
         if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
-            readCharacteristicFromService(mTemperatureCharacteristic);
+            mIsReadCommandExecutedSuccessfully =
+                    readCharacteristicFromService(mTemperatureCharacteristic);
         } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
-            readCharacteristicFromService(mDeviceNameCharacteristic);
+            mIsReadCommandExecutedSuccessfully =
+                    readCharacteristicFromService(mDeviceNameCharacteristic);
         } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
-            readCharacteristicFromService(mDeviceModelCharacteristic);
+            mIsReadCommandExecutedSuccessfully =
+                    readCharacteristicFromService(mDeviceModelCharacteristic);
         } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.HUMIDITY)) {
-            readCharacteristicFromService(mHumidityCharacteristic);
+            mIsReadCommandExecutedSuccessfully =
+                    readCharacteristicFromService(mHumidityCharacteristic);
         }
     }
 
@@ -480,8 +592,7 @@ public class BleConnectivityService extends Service {
         mDeviceModelCharacteristic = mDeviceInformationService
                 .getCharacteristic(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID));
 
-        // Read Manufacturer-Name from Characteristic
-        // Once successfully read, initiate Read Manufacturer-Model from broadcast
         readCharacteristicValue(CharacteristicTypes.MANUFACTURER_NAME);
+        readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
     }
 }
