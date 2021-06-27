@@ -113,21 +113,79 @@ public class MainActivity extends AppCompatActivity
     };
 
     /**
-     * Broadcast Receiver to communicate and update UI components from Service
+     * Device Manufacturer Name Broadcast Receiver
      */
-    private final BroadcastReceiver mGattStatusBroadcastReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver manufacturerNameBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
+            if (action != null) {
+                mManufacturerName = intent.getStringExtra(Constants.DATA_MANUFACTURER_NAME);
+                Log.d(TAG, "onReceive() called for with: Manufacture Name = [" + mManufacturerName + "]");
+            }
+        }
+    };
 
-            if (BleConnectivityService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                Log.d(TAG, "onReceive: ACTION_GATT_SERVICES_DISCOVERED");
+    /**
+     * Device Manufacturer Model Broadcast Receiver
+     */
+    private final BroadcastReceiver manufacturerModelBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (action != null) {
+                mManufacturerModel = intent.getStringExtra(Constants.DATA_MANUFACTURER_MODEL);
+                Log.d(TAG, "onReceive() called for with: Manufacture Model = [" + mManufacturerModel + "]");
 
-            } else if (BleConnectivityService.ACTION_DATA_AVAILABLE.equals(action)) {
-                Log.d(TAG, "onReceive: ACTION_DATA_AVAILABLE");
+                prepareDeviceInfoButton();
+            }
+        }
+    };
 
-                // Receive data via broadcast intent and display in UI
-                handleDataReceivedBroadcast(intent);
+    /**
+     * Temperature Broadcast Receiver
+     */
+    private final BroadcastReceiver temperatureBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (action != null) {
+                String temperature = intent.getStringExtra(Constants.DATA_TEMPERATURE);
+                Log.d(TAG, "onReceive() called for with: Temperature = [" + temperature + "]");
+
+                mBinding.tvTemperature.setText(temperature);
+            }
+        }
+    };
+
+    /**
+     * Humidity Broadcast Receiver
+     */
+    private final BroadcastReceiver humidityBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (action != null) {
+                String humidity = intent.getStringExtra(Constants.DATA_HUMIDITY);
+                Log.d(TAG, "onReceive() called for with: Humidity = [" + humidity + "]");
+
+                mBinding.tvHumidity.setText(humidity);
+            }
+        }
+    };
+
+    /**
+     * LED Status Broadcast Receiver
+     */
+    private final BroadcastReceiver ledStatusBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            if (action != null) {
+                String ledState = intent.getStringExtra(Constants.DATA_LED_STATUS);
+                Log.d(TAG, "onReceive() called for with: LED Status = [" + ledState + "]");
+
+                onLedBroadcastEventReceived(ledState);
             }
         }
     };
@@ -164,7 +222,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStart() {
         super.onStart();
-        registerToGattBroadcastReceiver();
+        registerToBroadcastReceivers();
         requestPermissions();
     }
 
@@ -181,7 +239,7 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onStop() {
         super.onStop();
-        unregisterFromGattBroadcastReceiver();
+        unregisterFromBroadcastReceiver();
     }
 
     @Override
@@ -220,7 +278,6 @@ public class MainActivity extends AppCompatActivity
         prepareNotifyTemperatureButton();
         prepareReadHumidityButton();
         prepareLedToggleButton();
-        prepareDeviceInfoButton();
     }
 
     @Override
@@ -484,26 +541,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void handleDataReceivedBroadcast(Intent intent) {
-        int currentBroadcastType = intent.getIntExtra(BleConnectivityService.DATA_TYPE, -1);
-
-        if (currentBroadcastType == Constants.DATA_TYPE_TEMPERATURE) {
-            String temperature = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-            mBinding.tvTemperature.setText(temperature);
-        } else if (currentBroadcastType == Constants.DATA_TYPE_HUMIDITY) {
-            String humidity = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-            mBinding.tvHumidity.setText(humidity);
-        } else if (currentBroadcastType == Constants.DATA_TYPE_LED) {
-            String ledState = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-            onLedBroadcastEventReceived(ledState);
-        } else if (currentBroadcastType == Constants.DATA_TYPE_MANUFACTURER_NAME) {
-            mManufacturerName = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-        } else if (currentBroadcastType == Constants.DATA_TYPE_MANUFACTURER_MODEL) {
-            mManufacturerModel = intent.getStringExtra(BleConnectivityService.EXTRA_DATA);
-        }
-    }
-
-    @Override
     public void onLedBroadcastEventReceived(String ledState) {
         Log.d(TAG, "onLedBroadcastEventReceived() called with: ledState = [" + ledState + "]");
 
@@ -531,15 +568,23 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void registerToGattBroadcastReceiver() {
-        Log.d(TAG, "registerToGattBroadcastReceiver() called");
-        registerReceiver(mGattStatusBroadcastReceiver, gattIntentFilters());
+    public void registerToBroadcastReceivers() {
+        Log.d(TAG, "registerToBroadcastReceivers() called");
+        registerReceiver(manufacturerNameBroadcastReceiver, new IntentFilter(Constants.ACTION_MANUFACTURER_NAME_AVAILABLE));
+        registerReceiver(manufacturerModelBroadcastReceiver, new IntentFilter(Constants.ACTION_MANUFACTURER_MODEL_AVAILABLE));
+        registerReceiver(temperatureBroadcastReceiver, new IntentFilter(Constants.ACTION_TEMPERATURE_AVAILABLE));
+        registerReceiver(humidityBroadcastReceiver, new IntentFilter(Constants.ACTION_HUMIDITY_AVAILABLE));
+        registerReceiver(ledStatusBroadcastReceiver, new IntentFilter(Constants.ACTION_LED_STATUS_AVAILABLE));
     }
 
     @Override
-    public void unregisterFromGattBroadcastReceiver() {
-        Log.d(TAG, "unregisterFromGattBroadcastReceiver() called");
-        unregisterReceiver(mGattStatusBroadcastReceiver);
+    public void unregisterFromBroadcastReceiver() {
+        Log.d(TAG, "unregisterFromBroadcastReceiver() called");
+        unregisterReceiver(manufacturerNameBroadcastReceiver);
+        unregisterReceiver(manufacturerModelBroadcastReceiver);
+        unregisterReceiver(temperatureBroadcastReceiver);
+        unregisterReceiver(humidityBroadcastReceiver);
+        unregisterReceiver(ledStatusBroadcastReceiver);
     }
 
     @Override
@@ -879,17 +924,5 @@ public class MainActivity extends AppCompatActivity
     private void updateAdapterConnectionState(int position) {
         mRvAdapter.setCurrentDeviceState(mCurrentState, position);
         mRvAdapter.notifyDataSetChanged();
-    }
-
-    /**
-     * Prepare Intent Filters for GATT Update Status
-     *
-     * @return intentFilter
-     */
-    private IntentFilter gattIntentFilters() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BleConnectivityService.ACTION_GATT_SERVICES_DISCOVERED);
-        intentFilter.addAction(BleConnectivityService.ACTION_DATA_AVAILABLE);
-        return intentFilter;
     }
 }

@@ -37,14 +37,13 @@ public interface MainActivityContract {
 
         void onConnectedBroadcastReceived(BluetoothDevice device);
         void onDisconnectedBroadcastReceived();
-        void handleDataReceivedBroadcast(Intent intent);
         void onLedBroadcastEventReceived(String ledState);
 
         void bindToService();
         void unbindFromService();
 
-        void registerToGattBroadcastReceiver();
-        void unregisterFromGattBroadcastReceiver();
+        void registerToBroadcastReceivers();
+        void unregisterFromBroadcastReceiver();
 
         void connectToDevice(String address);
         void disconnectFromDevice();

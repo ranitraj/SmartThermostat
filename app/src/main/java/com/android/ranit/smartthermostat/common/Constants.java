@@ -10,11 +10,20 @@ public class Constants {
     public static final String ON = "ON";
     public static final String OFF = "OFF";
 
-    public static final int DATA_TYPE_TEMPERATURE = 0;
-    public static final int DATA_TYPE_LED = 1;
-    public static final int DATA_TYPE_MANUFACTURER_NAME = 2;
-    public static final int DATA_TYPE_MANUFACTURER_MODEL = 3;
-    public static final int DATA_TYPE_HUMIDITY = 4;
+    // Intent-Filter actions for Broadcast-Receiver
+    public final static String ACTION_GATT_SERVICES_DISCOVERED = "smart.thermostat.ACTION_GATT_SERVICES_DISCOVERED";
+
+    public final static String ACTION_MANUFACTURER_NAME_AVAILABLE = "smart.thermostat.ACTION_MANUFACTURER_NAME_AVAILABLE";
+    public final static String ACTION_MANUFACTURER_MODEL_AVAILABLE = "smart.thermostat.ACTION_MANUFACTURER_MODEL_AVAILABLE";
+    public final static String ACTION_TEMPERATURE_AVAILABLE = "smart.thermostat.ACTION_TEMPERATURE_AVAILABLE";
+    public final static String ACTION_HUMIDITY_AVAILABLE = "smart.thermostat.ACTION_HUMIDITY_AVAILABLE";
+    public final static String ACTION_LED_STATUS_AVAILABLE = "smart.thermostat.ACTION_LED_STATUS_AVAILABLE";
+
+    public final static String DATA_MANUFACTURER_NAME = "smart.thermostat.DATA_MANUFACTURER_NAME";
+    public final static String DATA_MANUFACTURER_MODEL = "smart.thermostat.DATA_MANUFACTURER_MODEL";
+    public final static String DATA_TEMPERATURE = "smart.thermostat.DATA_TEMPERATURE";
+    public final static String DATA_HUMIDITY = "smart.thermostat.DATA_HUMIDITY";
+    public final static String DATA_LED_STATUS = "smart.thermostat.DATA_LED_STATUS";
 
     public static final int COMMAND_QUEUE_MAX_TRIES = 10;
 }

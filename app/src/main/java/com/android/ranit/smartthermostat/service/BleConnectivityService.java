@@ -37,13 +37,6 @@ import static android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
 public class BleConnectivityService extends Service {
     private static final String TAG = BleConnectivityService.class.getSimpleName();
 
-    // Intent Filter actions for Broadcast-Receiver
-    public final static String ACTION_GATT_SERVICES_DISCOVERED = "smart.thermostat.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE = "smart.thermostat.ACTION_DATA_AVAILABLE";
-
-    public final static String DATA_TYPE = "smart.thermostat.DATA_TYPE";
-    public final static String EXTRA_DATA = "smart.thermostat.EXTRA_DATA";
-
     // Services
     private BluetoothGattService mEnvironmentSensingService;
     private BluetoothGattService mLedService;
@@ -60,10 +53,10 @@ public class BleConnectivityService extends Service {
     private BluetoothGattDescriptor mTemperatureDescriptor;
 
     // Priority Queue (Since, ONLY 1 characteristic is read at a time)
-    private Queue<Runnable> mCommandQueue = new LinkedList<>();
-    private Handler mBleHandler = new Handler();
-    private boolean mIsCommandQueueBusy;
-    private boolean mIsCommandQueueRetrying;
+    private final Queue<Runnable> mCommandQueue = new LinkedList<>();
+    private final Handler mBleHandler = new Handler();
+    private boolean mIsCommandQueueBusy = false;
+    private boolean mIsCommandQueueRetrying = false;
     private int mNumberOfTries = 0;
 
     private BluetoothManager mBluetoothManager;
@@ -115,7 +108,7 @@ public class BleConnectivityService extends Service {
                 setupDeviceInformationCharacteristic(gatt);
                 setupLedCharacteristic(gatt);
 
-                broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                broadcastUpdate(Constants.ACTION_GATT_SERVICES_DISCOVERED);
             } else {
                 Log.e(TAG, "onServicesDiscovered(): GATT_FAILURE");
             }
@@ -127,13 +120,12 @@ public class BleConnectivityService extends Service {
             Log.d(TAG, "onCharacteristicRead() called");
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, mCurrentCharacteristicType);
-
-                completedCommand();
+                // Prepare broadcast as per Characteristic Type
+                prepareBroadcastAsPerCharacteristicType(characteristic);
             } else {
                 Log.e(TAG, "onCharacteristicRead(): GATT_FAILURE");
-                completedCommand();
             }
+            completedCommand();
         }
 
         @Override
@@ -142,10 +134,11 @@ public class BleConnectivityService extends Service {
             Log.d(TAG, "onCharacteristicWrite() called");
 
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, CharacteristicTypes.LED);
+                broadcastUpdate(Constants.ACTION_LED_STATUS_AVAILABLE, characteristic);
             } else {
                 Log.e(TAG, "onCharacteristicWrite(): GATT_FAILURE");
             }
+            completedCommand();
         }
 
         @Override
@@ -166,9 +159,29 @@ public class BleConnectivityService extends Service {
             super.onCharacteristicChanged(gatt, characteristic);
             Log.d(TAG, "onCharacteristicChanged() called ");
 
-            broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic, mCurrentCharacteristicType);
+            // Prepare broadcast as per Characteristic Type
+            prepareBroadcastAsPerCharacteristicType(characteristic);
         }
     };
+
+    /**
+     * Sends data to be updated via broadcast as per characteristic type
+     *
+     * @param characteristic - BluetoothGattCharacteristic type
+     */
+    private void prepareBroadcastAsPerCharacteristicType(BluetoothGattCharacteristic characteristic) {
+        if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.MANUFACTURER_NAME_CHARACTERISTIC_UUID))) {
+            broadcastUpdate(Constants.ACTION_MANUFACTURER_NAME_AVAILABLE, characteristic);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID))) {
+            broadcastUpdate(Constants.ACTION_MANUFACTURER_MODEL_AVAILABLE, characteristic);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.TEMPERATURE_CHARACTERISTIC_UUID))) {
+            broadcastUpdate(Constants.ACTION_TEMPERATURE_AVAILABLE, characteristic);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.HUMIDITY_CHARACTERISTIC_UUID))) {
+            broadcastUpdate(Constants.ACTION_HUMIDITY_AVAILABLE, characteristic);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.LED_CHARACTERISTIC_UUID))) {
+            broadcastUpdate(Constants.ACTION_LED_STATUS_AVAILABLE, characteristic);
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -206,52 +219,44 @@ public class BleConnectivityService extends Service {
      *
      * @param action - Type of Action (for Intent-Filter)
      * @param characteristic - characteristic read from Service
-     * @param characteristicToBeRead - facilitates parsing based on type of characteristic
      */
-     private void broadcastUpdate(final String action, BluetoothGattCharacteristic characteristic,
-                                 CharacteristicTypes characteristicToBeRead) {
+     private void broadcastUpdate(final String action, BluetoothGattCharacteristic characteristic) {
         final Intent intent = new Intent(action);
 
         // Filter and broadcast Data based on 'CharacteristicType'
-         if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
-             String manufacturerName = characteristic.getStringValue(0);
-             Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerName);
+        if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.MANUFACTURER_NAME_CHARACTERISTIC_UUID))) {
+            String manufacturerName = characteristic.getStringValue(0);
+            Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerName);
 
-             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_NAME);
-             intent.putExtra(EXTRA_DATA, manufacturerName);
+            intent.putExtra(Constants.DATA_MANUFACTURER_NAME, manufacturerName);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID))) {
+            String manufacturerModel = characteristic.getStringValue(0);
+            Log.d(TAG, "broadcastUpdate: Received Manufacturer Model: "+manufacturerModel);
 
-         } else if (characteristicToBeRead.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
-             String manufacturerModel = characteristic.getStringValue(0);
-             Log.d(TAG, "broadcastUpdate: Received Manufacturer Name: "+manufacturerModel);
-
-             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_MANUFACTURER_MODEL);
-             intent.putExtra(EXTRA_DATA, manufacturerModel);
-         } else if (characteristicToBeRead.equals(CharacteristicTypes.TEMPERATURE)) {
+            intent.putExtra(Constants.DATA_MANUFACTURER_MODEL, manufacturerModel);
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.TEMPERATURE_CHARACTERISTIC_UUID))) {
             int temperatureInteger = (characteristic.getIntValue(FORMAT_UINT16, 0));
 
-             // Need a resolution of 0.01 degrees Celsius, so dividing 'temperature' by 100
-             float temperature = (temperatureInteger / 100f);
-             Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
+            // Need a resolution of 0.01 degrees Celsius, so dividing 'temperature' by 100
+            float temperature = (temperatureInteger / 100f);
+            Log.d(TAG, "broadcastUpdate: Received Temperature: "+temperature);
 
-            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_TEMPERATURE);
-            intent.putExtra(EXTRA_DATA, String.valueOf(temperature));
-        } else if (characteristicToBeRead.equals(CharacteristicTypes.HUMIDITY)) {
+            intent.putExtra(Constants.DATA_TEMPERATURE, String.valueOf(temperature));
+        } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.HUMIDITY_CHARACTERISTIC_UUID))) {
              int humidityInteger = (characteristic.getIntValue(FORMAT_UINT16, 0));
 
              // Need a resolution of 0.01 percent, so dividing 'humidity' by 100
              float humidity = (humidityInteger / 100f);
              Log.d(TAG, "broadcastUpdate: Received Humidity: "+humidity);
 
-             intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_HUMIDITY);
-             intent.putExtra(EXTRA_DATA, String.valueOf(humidity));
-         } else if (characteristicToBeRead.equals(CharacteristicTypes.LED)) {
+             intent.putExtra(Constants.DATA_HUMIDITY, String.valueOf(humidity));
+         } else if (characteristic.getUuid().equals(UUID.fromString(GattAttributes.LED_CHARACTERISTIC_UUID))) {
             Log.d(TAG, "broadcastUpdate: LED is: "+mLedState);
 
-            intent.putExtra(DATA_TYPE, Constants.DATA_TYPE_LED);
-            intent.putExtra(EXTRA_DATA, String.valueOf(mLedState));
+            intent.putExtra(Constants.DATA_LED_STATUS, String.valueOf(mLedState));
         }
 
-         sendBroadcast(intent);
+        sendBroadcast(intent);
     }
 
     /**
@@ -308,11 +313,42 @@ public class BleConnectivityService extends Service {
         });
 
         if (result) {
+            Log.d(TAG, "readCharacteristicFromService: Reading Characteristic with UUID: "+characteristic.getUuid());
             executeNextCommand();
         } else {
             Log.e(TAG, "readCharacteristicFromService: Couldn't enqueue read characteristic");
         }
         return result;
+    }
+
+    /**
+     * Write to characteristic with descriptor (notify)
+     *
+     * @param descriptor - bluetoothGattCharacteristic to be written to
+     */
+    private void notifyCharacteristicFromService(BluetoothGattDescriptor descriptor) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.e(TAG, "notifyCharacteristicFromService: BluetoothAdapter not initialized");
+            return;
+        }
+        mBluetoothGatt.writeDescriptor(descriptor);
+    }
+
+    /**
+     * Write to characteristic
+     *
+     * @param characteristic - bluetoothGattCharacteristic into which to write
+     */
+    private void writeCharacteristicToService(BluetoothGattCharacteristic characteristic, byte[] data) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.e(TAG, "writeCharacteristicToService: BluetoothAdapter not initialized");
+            return;
+        }
+        characteristic.setWriteType(WRITE_TYPE_DEFAULT);
+        characteristic.setValue(data);
+        mBluetoothGatt.writeCharacteristic(characteristic);
+
+
     }
 
     /**
@@ -386,34 +422,6 @@ public class BleConnectivityService extends Service {
     }
 
     /**
-     * Write to characteristic with descriptor (notify)
-     *
-     * @param descriptor - bluetoothGattCharacteristic to be written to
-     */
-    private void notifyCharacteristicFromService(BluetoothGattDescriptor descriptor) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.e(TAG, "notifyCharacteristicFromService: BluetoothAdapter not initialized");
-            return;
-        }
-        mBluetoothGatt.writeDescriptor(descriptor);
-    }
-
-    /**
-     * Write to characteristic
-     *
-     * @param characteristic - bluetoothGattCharacteristic into which to write
-     */
-    private void writeCharacteristicToService(BluetoothGattCharacteristic characteristic, byte[] data) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.e(TAG, "writeCharacteristicToService: BluetoothAdapter not initialized");
-            return;
-        }
-        characteristic.setWriteType(WRITE_TYPE_DEFAULT);
-        characteristic.setValue(data);
-        mBluetoothGatt.writeCharacteristic(characteristic);
-    }
-
-    /**
      * Connects to the GATT server hosted on the Bluetooth LE device.
      *
      * @param address - The device address of the destination device.
@@ -470,12 +478,6 @@ public class BleConnectivityService extends Service {
         if (mCurrentCharacteristicType.equals(CharacteristicTypes.TEMPERATURE)) {
             mIsReadCommandExecutedSuccessfully =
                     readCharacteristicFromService(mTemperatureCharacteristic);
-        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_NAME)) {
-            mIsReadCommandExecutedSuccessfully =
-                    readCharacteristicFromService(mDeviceNameCharacteristic);
-        } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.MANUFACTURER_MODEL)) {
-            mIsReadCommandExecutedSuccessfully =
-                    readCharacteristicFromService(mDeviceModelCharacteristic);
         } else if (mCurrentCharacteristicType.equals(CharacteristicTypes.HUMIDITY)) {
             mIsReadCommandExecutedSuccessfully =
                     readCharacteristicFromService(mHumidityCharacteristic);
@@ -592,7 +594,7 @@ public class BleConnectivityService extends Service {
         mDeviceModelCharacteristic = mDeviceInformationService
                 .getCharacteristic(UUID.fromString(GattAttributes.MANUFACTURER_MODEL_CHARACTERISTIC_UUID));
 
-        readCharacteristicValue(CharacteristicTypes.MANUFACTURER_NAME);
-        readCharacteristicValue(CharacteristicTypes.MANUFACTURER_MODEL);
+        readCharacteristicFromService(mDeviceNameCharacteristic);
+        readCharacteristicFromService(mDeviceModelCharacteristic);
     }
 }
