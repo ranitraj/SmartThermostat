@@ -46,11 +46,13 @@ embeddded in an Arduino-Nano 33 and display the same in the Android device using
 ![WhatsApp Image 2021-06-28 at 21 28 54](https://user-images.githubusercontent.com/15179100/123692223-2dbb7d00-d874-11eb-8ca2-832d151ce316.jpeg)
 
 ## License:
-Licensed under the Apache License, Version 2.0 (the "License")
-You may not use this file except in compliance with the License.
-You may obtain a copy of the License at:
+Copyright [2021] [Ranit Raj Ganguly]
 
-   http://www.apache.org/licenses/LICENSE-2.0
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
