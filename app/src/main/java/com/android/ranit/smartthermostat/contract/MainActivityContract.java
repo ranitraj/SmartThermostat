@@ -34,6 +34,7 @@ public interface MainActivityContract {
 
         void startScanning();
         void stopScanning();
+        void showPreviouslyConnectedDevice();
 
         void onConnectedBroadcastReceived(BluetoothDevice device);
         void onDisconnectedBroadcastReceived();

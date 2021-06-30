@@ -45,7 +45,7 @@ public class AclBroadcastReceiver extends BroadcastReceiver {
 
                 // Updating Live-Data as per connection-state DISCONNECTED
                 DataManager.getInstance()
-                        .setBleDeviceLiveData(new BleDeviceDataObject(ConnectionStates.DISCONNECTED, bluetoothDevice));
+                        .setBleDeviceLiveData(new BleDeviceDataObject(ConnectionStates.DISCONNECTED, null));
             }
         }
     }

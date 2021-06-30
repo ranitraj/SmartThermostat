@@ -472,6 +472,7 @@ public class MainActivity extends AppCompatActivity
             changeVisibility(mScanningLottieView, View.VISIBLE);
         }
         playDialogAnimation(ANIMATION_SCANNING);
+        showPreviouslyConnectedDevice();
 
         // Begin Scan
         Log.d(TAG, "Started Scanning for BLE devices");
@@ -497,6 +498,28 @@ public class MainActivity extends AppCompatActivity
         mBluetoothLeScanner.stopScan(bluetoothLeScanCallback);
         mBleDeviceList.clear();
         mRvAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Shows already connected BLE device in the device scanning dialog (if-any)
+     */
+    @Override
+    public void showPreviouslyConnectedDevice() {
+        if (DataManager.getInstance().getBleDeviceLiveData().getValue() != null) {
+            if (DataManager.getInstance().getBleDeviceLiveData().getValue()
+                    .getBluetoothDevice() != null) {
+                BluetoothDevice device = DataManager.getInstance().getBleDeviceLiveData().getValue()
+                        .getBluetoothDevice();
+                Log.d(TAG, "Already Connected to device = [" + device.getName() + "]");
+
+                mBleDeviceList.add(device);
+                mCurrentState = ConnectionStates.CONNECTED;
+                updateAdapterConnectionState(0);
+            } else {
+                Log.e(TAG, "Not connected to any BLE device previously");
+                mCurrentState = ConnectionStates.DISCONNECTED;
+            }
+        }
     }
 
     /**
