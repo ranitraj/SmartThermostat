@@ -29,11 +29,6 @@ embeddded in an Arduino-Nano 33 and display the same in the Android device using
      communicates with the UI via Broadcast-Receiver
   * Broadcast-Receivers:
      * AclBroadcastReceiver - Broadcasts global events of connection and disconnection of BLE devices
-     * DeviceModelBroadcastReceiver - Broadcasts DeviceModel characteristic data of DeviceInformationService via BleConnectivityService
-     * DeviceManufacturerBroadcastReceiver - Broadcasts DeviceManufacturer characteristic data of DeviceInformationService via BleConnectivityService
-     * TemperatureBroadcastReceiver - Broadcasts Temperature characteristic data of EnvironmentalSensingService via BleConnectivityService
-     * HumidityBroadcastReceiver - Broadcasts Humidity characteristic data of EnvironmentalSensingService via BleConnectivityService
-     * LedStatusBroadcastReceiver - Broadcasts LedStatus characteristic data of Custom LedService via BleConnectivityService
      
  ## Screenshots:
 ![WhatsApp Image 2021-06-28 at 21 27 43](https://user-images.githubusercontent.com/15179100/123692082-05338300-d874-11eb-88d3-6671c5a370d8.jpeg)
